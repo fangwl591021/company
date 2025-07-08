@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>查詢我的優惠</title>
+  <link rel="stylesheet" href="static/css/style.css"/>
+</head>
+<body>
+  <h1>🔍 我的優惠</h1>
+  <button id="queryBtn" disabled>載入中…</button>
+  <ul id="list" style="margin-top:1rem;"></ul>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDVi_uOjYl0p0rSnP1gRf1LlguJYl4ZEYijY8xvdikmIeZPWiAZFVSWW9ZBGRehwd3/exec';
+    const params = new URL(location).searchParams;
+    const storeId = params.get('storeId');
+    let USER_ID = null;
+
+    async function init() {
+      // 與 index.html 相同邏輯：取得 liffId → init → login → getProfile
+      const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${storeId}`);
+      const { liffId } = await res.json();
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) liff.login();
+      const profile = await liff.getProfile();
+      USER_ID = profile.userId;
+      const btn = document.getElementById('queryBtn');
+      btn.disabled = false;
+      btn.textContent = '查詢我的優惠';
+      btn.onclick = fetchList;
+    }
+
+    async function fetchList() {
+      const res = await fetch(`${SCRIPT_URL}?action=query&userId=${USER_ID}&storeId=${storeId}`);
+      const list = await res.json();
+      const ul = document.getElementById('list');
+      ul.innerHTML = '';
+      if (!list.length) {
+        ul.innerHTML = '<li>目前沒有可兌換的優惠</li>';
+      } else {
+        list.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = `${item.vendor}：${item.prize}（${new Date(item.time).toLocaleString()}）`;
+          ul.appendChild(li);
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
