@@ -20,10 +20,12 @@
   <h1>店家註冊申請</h1>
   <button id="loginBtn" style="display:none">LINE 登入</button>
   <div id="form" style="display:none">
+    <!-- 非管理員只顯示提交按鈕，管理員多一個「查看待審核」按鈕 -->
     <input id="storeName" placeholder="店家名稱">
     <input id="name" placeholder="姓名">
     <input id="phone" placeholder="電話">
     <button id="submitBtn">送出註冊申請</button>
+    <button id="viewPendingBtn" style="display:none; margin-top:8px;">查看待審核列表</button>
   </div>
   <div id="pending" style="display:none">
     <h2>待審核列表</h2>
@@ -56,6 +58,12 @@
       const profile = await liff.getProfile();
       USER_ID = profile.userId;
       document.getElementById('form').style.display = 'block';
+      // 如果是管理員，顯示查看待審核按鈕
+      if (ADMINS.includes(USER_ID)) {
+        const viewBtn = document.getElementById('viewPendingBtn');
+        viewBtn.style.display = 'block';
+        viewBtn.onclick = loadPending;
+      }
 
       // 管理員直接載入待審核列表
       if (ADMINS.includes(USER_ID)) loadPending();
