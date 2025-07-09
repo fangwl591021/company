@@ -4,25 +4,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <!-- 正確引用 style.css.html -->
+
+  <!-- 正確引用 GAS 內部的 style.css.html -->
   <?!= include("style.css"); ?>
-  <!-- LIFF SDK：必須在呼叫 liff.init() 前載入 -->
+
+  <!-- LIFF SDK：在呼叫 liff.init() 前載入 -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
   <style>
     #form { display: none; margin-top: 1rem; }
+    input {
+      display: block;
+      margin: 8px auto;
+      padding: 10px;
+      font-size: 1em;
+      width: 90%;
+      max-width: 320px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
   </style>
 </head>
 
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
-  <button id="loginBtn">LINE 登入</button>
-  <button id="play">載入中…</button>
+
+  <button id="loginBtn" style="display:none;">LINE 登入</button>
+  <button id="play" style="display:none;">載入中…</button>
 
   <video id="mv" playsinline style="display:none; width:100%; max-width:420px; border-radius:12px; margin-top:20px;">
     <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
   </video>
 
-  <div id="msg" style="margin:18px 0 8px; font-size:1.4em; font-weight:bold;"></div>
+  <div id="msg" style="margin:18px 0 8px; font-size:1.4em; font-weight:bold;">🔄 載入中，請稍候…</div>
 
   <div id="form">
     <input id="username" placeholder="姓名" readonly />
@@ -32,6 +46,7 @@
     </div>
   </div>
 
+  <!-- 音效 -->
   <audio id="winSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
   <audio id="loseSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
 
@@ -42,16 +57,24 @@
     let PROFILE = null;
 
     async function fetchLiffId(sid) {
-      const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${sid}`);
-      const data = await res.json();
-      return data.liffId;
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${sid}`);
+        const data = await res.json();
+        return data.liffId;
+      } catch (e) {
+        return null;
+      }
     }
 
     async function init() {
       const liffId = await fetchLiffId(storeId);
-      if (!liffId) { alert('找不到對應的 LIFF ID'); return; }
+      if (!liffId || liffId === 'undefined' || liffId.error) {
+        alert('❌ 找不到對應的 LIFF ID，請確認網址中 storeId 是否正確');
+        return;
+      }
 
       await liff.init({ liffId });
+
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
         document.getElementById('loginBtn').onclick = () => liff.login();
@@ -59,37 +82,45 @@
       }
 
       document.getElementById('loginBtn').style.display = 'none';
+
       PROFILE = await liff.getProfile();
       USER_ID = PROFILE.userId;
 
       const playBtn = document.getElementById('play');
-      playBtn.textContent = '開始遊戲';
+      playBtn.textContent = '🎮 開始遊戲';
       playBtn.style.display = 'block';
+      document.getElementById('msg').textContent = '🕹️ 點擊「開始遊戲」來試試手氣吧！';
+
       playBtn.onclick = handleDraw;
     }
 
     function showAnimation(seconds) {
       return new Promise(resolve => {
-        const playBtn = document.getElementById('play');
-        playBtn.style.display = 'none';
+        document.getElementById('play').style.display = 'none';
         const video = document.getElementById('mv');
         video.style.display = 'block';
         video.currentTime = 0;
         video.play();
-        setTimeout(() => { video.pause(); resolve(); }, seconds * 1000);
+        setTimeout(() => {
+          video.pause();
+          resolve();
+        }, seconds * 1000);
       });
     }
 
     async function handleDraw() {
       await showAnimation(7);
+
       const res = await fetch(
         `${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`,
         { method: 'POST' }
       );
+
       const data = await res.json();
       const msgEl = document.getElementById('msg');
+
       if (data.error) {
-        msgEl.textContent = `錯誤：${data.error}`;
+        msgEl.textContent = `❌ 錯誤：${data.error}`;
         document.getElementById('play').style.display = 'block';
         return;
       }
@@ -101,6 +132,7 @@
         document.getElementById('form').style.display = 'block';
         document.getElementById('username').value = PROFILE.displayName;
         const submitBtn = document.getElementById('submit');
+        submitBtn.textContent = '送出';
         submitBtn.style.display = 'block';
         submitBtn.onclick = handleSubmit;
       }
@@ -108,7 +140,14 @@
 
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
-      if (!phone) { alert('請填手機'); return; }
+      if (!phone) {
+        alert('請填寫手機號碼');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送出中...';
 
       await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -121,10 +160,10 @@
         })
       });
 
-      document.getElementById('msg').textContent = '✅ 已送出！';
-      const btn = document.getElementById('submit');
-      btn.textContent = '關閉視窗';
-      btn.onclick = () => liff.closeWindow();
+      document.getElementById('msg').textContent = '✅ 資料已送出！感謝參與～';
+      submitBtn.textContent = '關閉視窗';
+      submitBtn.disabled = false;
+      submitBtn.onclick = () => liff.closeWindow();
     }
 
     window.addEventListener('DOMContentLoaded', init);
