@@ -2,171 +2,73 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🎰 轉轉小瑪莉</title>
-
-  <!-- 正確引用 GAS 內部的 style.css.html -->
-  <?!= include("style.css"); ?>
-
-  <!-- LIFF SDK：在呼叫 liff.init() 前載入 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>轉轉小瑪莉</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
   <style>
-    #form { display: none; margin-top: 1rem; }
-    input {
-      display: block;
-      margin: 8px auto;
-      padding: 10px;
-      font-size: 1em;
-      width: 90%;
-      max-width: 320px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      padding: 2em;
+      background-color: #f9f9f9;
+    }
+    .loading {
+      font-size: 1.5em;
+      color: #555;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
     }
   </style>
 </head>
-
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
-
-  <button id="loginBtn" style="display:none;">LINE 登入</button>
-  <button id="play" style="display:none;">載入中…</button>
-
-  <video id="mv" playsinline style="display:none; width:100%; max-width:420px; border-radius:12px; margin-top:20px;">
-    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
-  </video>
-
-  <div id="msg" style="margin:18px 0 8px; font-size:1.4em; font-weight:bold;">🔄 載入中，請稍候…</div>
-
-  <div id="form">
-    <input id="username" placeholder="姓名" readonly />
-    <input id="phone" placeholder="手機" />
-    <div id="wrapSubmit" style="display:flex; justify-content:center; margin-top:12px;">
-      <button id="submit" style="display:none;">送出</button>
-    </div>
-  </div>
-
-  <!-- 音效 -->
-  <audio id="winSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
-  <audio id="loseSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
+  <div id="status" class="loading">載入中，請稍候...</div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7TbjnH9A8NXBPJUB0CLuBjWYTAGykYAfy4AXJVNr-kQJViXKPnond7ljoUO7UWxVN/exec';
-    const storeId = new URL(location).searchParams.get('storeId');
-    let USER_ID = null;
-    let PROFILE = null;
+    const API_URL = 'https://script.google.com/macros/s/AKfycbw3aGQv0Cexxxxxxxxxxx/exec'; // 🔁 請換成你的 GAS 網址
 
-    async function fetchLiffId(sid) {
-      try {
-        const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${sid}`);
-        const data = await res.json();
-        return data.liffId;
-      } catch (e) {
-        return null;
-      }
+    async function fetchLiffId(storeId) {
+      const url = `${API_URL}?action=getLiffId&storeId=${storeId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return data.liffId;
     }
 
     async function init() {
-      const liffId = await fetchLiffId(storeId);
-      if (!liffId || liffId === 'undefined' || liffId.error) {
-        alert('❌ 找不到對應的 LIFF ID，請確認網址中 storeId 是否正確');
+      const urlParams = new URLSearchParams(window.location.search);
+      const directLiffId = urlParams.get('liffId');
+      const storeId = urlParams.get('storeId');
+
+      let liffId = null;
+
+      if (directLiffId) {
+        liffId = directLiffId;
+      } else if (storeId) {
+        try {
+          liffId = await fetchLiffId(storeId);
+        } catch (err) {
+          document.getElementById('status').innerHTML = '<div class="error">❌ 讀取 LIFF ID 發生錯誤</div>';
+          return;
+        }
+      }
+
+      if (!liffId || liffId === 'null') {
+        document.getElementById('status').innerHTML = '<div class="error">❌ 找不到對應的 LIFF ID，請確認網址中 storeId 或 liffId 是否正確</div>';
         return;
       }
 
-      await liff.init({ liffId });
-
-      if (!liff.isLoggedIn()) {
-        document.getElementById('loginBtn').style.display = 'block';
-        document.getElementById('loginBtn').onclick = () => liff.login();
-        return;
-      }
-
-      document.getElementById('loginBtn').style.display = 'none';
-
-      PROFILE = await liff.getProfile();
-      USER_ID = PROFILE.userId;
-
-      const playBtn = document.getElementById('play');
-      playBtn.textContent = '🎮 開始遊戲';
-      playBtn.style.display = 'block';
-      document.getElementById('msg').textContent = '🕹️ 點擊「開始遊戲」來試試手氣吧！';
-
-      playBtn.onclick = handleDraw;
-    }
-
-    function showAnimation(seconds) {
-      return new Promise(resolve => {
-        document.getElementById('play').style.display = 'none';
-        const video = document.getElementById('mv');
-        video.style.display = 'block';
-        video.currentTime = 0;
-        video.play();
-        setTimeout(() => {
-          video.pause();
-          resolve();
-        }, seconds * 1000);
-      });
-    }
-
-    async function handleDraw() {
-      await showAnimation(7);
-
-      const res = await fetch(
-        `${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`,
-        { method: 'POST' }
-      );
-
-      const data = await res.json();
-      const msgEl = document.getElementById('msg');
-
-      if (data.error) {
-        msgEl.textContent = `❌ 錯誤：${data.error}`;
-        document.getElementById('play').style.display = 'block';
-        return;
-      }
-
-      msgEl.textContent = `🎉 恭喜獲得 ${data.vendor} 的 ${data.prize}`;
-      document.getElementById('winSound').play().catch(() => {});
-
-      if (data.vendor) {
-        document.getElementById('form').style.display = 'block';
-        document.getElementById('username').value = PROFILE.displayName;
-        const submitBtn = document.getElementById('submit');
-        submitBtn.textContent = '送出';
-        submitBtn.style.display = 'block';
-        submitBtn.onclick = handleSubmit;
+      try {
+        await liff.init({ liffId });
+        document.getElementById('status').textContent = `✅ 已登入 LIFF，歡迎 ${liff.getContext().userId}`;
+        // 這裡可以開始載入抽獎畫面或功能
+      } catch (err) {
+        document.getElementById('status').innerHTML = '<div class="error">❌ LIFF 初始化失敗</div>';
+        console.error(err);
       }
     }
 
-    async function handleSubmit() {
-      const phone = document.getElementById('phone').value.trim();
-      if (!phone) {
-        alert('請填寫手機號碼');
-        return;
-      }
-
-      const submitBtn = document.getElementById('submit');
-      submitBtn.disabled = true;
-      submitBtn.textContent = '送出中...';
-
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'claim',
-          storeId,
-          userId: USER_ID,
-          name: PROFILE.displayName,
-          phone
-        })
-      });
-
-      document.getElementById('msg').textContent = '✅ 資料已送出！感謝參與～';
-      submitBtn.textContent = '關閉視窗';
-      submitBtn.disabled = false;
-      submitBtn.onclick = () => liff.closeWindow();
-    }
-
-    window.addEventListener('DOMContentLoaded', init);
+    window.onload = init;
   </script>
 </body>
 </html>
