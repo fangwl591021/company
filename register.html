@@ -39,7 +39,8 @@
     }
     #msg {
       margin: 16px 0;
-      font-size: 1.2em;
+      font-size: 1.1em;
+      color: #ccc;
     }
     #pending button {
       width: auto;
@@ -67,39 +68,46 @@
   <div id="msg"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/你的WebApp部署網址/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/你的WebApp網址/exec';
     const ADMINS = ['Udb7c5578b402bf6f1e0f7065fc57c17b', 'Uee955167d0b18f84a66906b550c9b292'];
-    let USER_ID;
+    let USER_ID = '';
 
     async function init() {
-      const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
-      let { liffId } = await res.json();
-      if (!liffId) {
-        console.warn('後端未回傳 ADMIN LIFF ID，使用預設值');
-        liffId = '2007161529-w3nJZpm0'; // 可改為你自己的 fallback
-      }
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
+        let { liffId } = await res.json();
+        if (!liffId) {
+          console.warn('未回傳 LIFF ID，使用預設');
+          liffId = '2007161529-w3nJZpm0';
+        }
 
-      await liff.init({ liffId });
+        await liff.init({ liffId });
 
-      if (!liff.isLoggedIn()) {
-        document.getElementById('loginBtn').style.display = 'block';
-        document.getElementById('loginBtn').onclick = () => liff.login();
-        return;
-      }
+        if (!liff.isLoggedIn()) {
+          document.getElementById('loginBtn').style.display = 'block';
+          document.getElementById('loginBtn').onclick = () => liff.login();
+          return;
+        }
 
-      document.getElementById('loginBtn').style.display = 'none';
-      const profile = await liff.getProfile();
-      USER_ID = profile.userId;
-      document.getElementById('form').style.display = 'block';
+        const profile = await liff.getProfile();
+        USER_ID = profile.userId;
+        document.getElementById('msg').textContent = '你的 USER_ID 是：' + USER_ID;
 
-      // 管理員功能控制
-      const isAdmin = ADMINS.includes(USER_ID);
-      document.getElementById('viewPendingBtn').style.display = isAdmin ? 'block' : 'none';
-      document.getElementById('pending').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('form').style.display = 'block';
+        const isAdmin = ADMINS.includes(USER_ID);
 
-      if (isAdmin) {
-        document.getElementById('viewPendingBtn').onclick = loadPending;
-        loadPending();
+        if (isAdmin) {
+          document.getElementById('viewPendingBtn').style.display = 'block';
+          document.getElementById('pending').style.display = 'block';
+          document.getElementById('viewPendingBtn').onclick = loadPending;
+          loadPending();
+        } else {
+          document.getElementById('viewPendingBtn').style.display = 'none';
+          document.getElementById('pending').style.display = 'none';
+        }
+
+      } catch (err) {
+        alert('⚠️ 發生錯誤：' + err.message);
       }
     }
 
@@ -107,7 +115,7 @@
       const storeName = document.getElementById('storeName').value.trim();
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
-      if (!storeName || !name || !phone) return alert('請填完整');
+      if (!storeName || !name || !phone) return alert('請填寫所有欄位');
 
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -124,14 +132,12 @@
         ? '✅ 申請已送出，請等待核准'
         : `❌ 錯誤：${res.error}`;
 
-      // 清空欄位
       if (res.success) {
         document.getElementById('storeName').value = '';
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
       }
 
-      // 管理員重新載入名單
       if (ADMINS.includes(USER_ID)) loadPending();
     }
 
