@@ -1,71 +1,97 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>🔍 我的優惠券</title>
   <style>
-    body { margin:0; padding:0; background:#000; color:#fff;
-      font-family:"Microsoft JhengHei"; text-align:center;}
-    h1{margin:24px 0; color:gold;}
-    button{padding:12px 24px;margin:12px auto;font-size:1rem;
-      background:#28a745;border:none;color:#fff;border-radius:8px;
-      display:block;cursor:pointer;}
-    .card{background:#333;margin:12px auto;padding:16px;
-      border-radius:8px;max-width:360px;text-align:left;}
+    body { margin:0; padding:0; background:#000; color:#fff; font-family:"Microsoft JhengHei"; text-align:center }
+    h1{margin:24px 0;color:gold;}
+    button{padding:12px 24px;margin:12px auto;display:block;
+            background:#28a745;border:none;color:#fff;border-radius:8px;cursor:pointer}
+    .card{background:#222;margin:12px auto;padding:16px;border-radius:8px;max-width:360px;text-align:left}
+    .card p{margin:4px 0;color:#fff;font-size:0.9rem}
+    .card button{margin-top:8px;padding:8px;display:block;width:100%;border:none;border-radius:6px;
+                 background:#009688;color:#fff;cursor:pointer}
   </style>
+  <!-- 正确引入 LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <h1>🔍 我的優惠券</h1>
-  <button id="btn">查詢我的優惠</button>
+  <button id="loginBtn" style="display:none;background:#00c300;">LINE 登入</button>
+  <button id="loadBtn">查詢我的優惠</button>
   <div id="list"></div>
 
   <script>
-    const API = 'https://script.google.com/macros/s/AKfycbwysJAZvf-dFwI1FUuj2CRa_h3_h9b5t7z4ijwyAIbJZmdQ4Bnz4Nbxk0Z_wRoFvPR1/exec';
-    const storeId = new URL(location).searchParams.get('storeId');
+    const API = 'https://script.google.com/macros/s/AKfycbzzFMCs4J79zh1AdanFffAe3Ezenony3I2pDsWv2OGO5XR9pWyDyfWOF77CMOjbPaLQ/exec';
     let USER_ID;
 
-    async function init(){
-      await liff.init({ liffId:'你的LIFF_ID' });
-      if(!liff.isLoggedIn()) return liff.login();
-      const p = await liff.getProfile();
-      USER_ID = p.userId;
+    async function initLIFF() {
+      // 1. 取 LIFF ID（不传 storeId，因为 query 已不需要分店）
+      const res = await fetch(`${API}?action=getLiffId&storeId=ADMIN`);
+      // 后端识别 ADMIN 并返回统一 LIFF ID
+      const { liffId } = await res.json();
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) {
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('loginBtn').onclick = ()=> liff.login();
+      } else {
+        const prof = await liff.getProfile();
+        USER_ID = prof.userId;
+      }
     }
 
-    function render(data){
-      const cont = document.getElementById('list');
-      cont.innerHTML = '';
-      if(!data.length){
-        cont.innerHTML = '<p>目前沒有可核銷的優惠</p>';
+    function render(list) {
+      const container = document.getElementById('list');
+      container.innerHTML = '';
+      if (!list.length) {
+        container.innerHTML = '<p>目前沒有可核銷的優惠</p>';
         return;
       }
-      data.forEach(d=>{
-        const time = new Date(d.time).toLocaleString();
-        cont.innerHTML += `
-        <div class="card">
-          <p>☑️ ${d.username}</p>
-          <p>💌 ${d.vendor}：${d.prize}</p>
-          <p>⌚️ 中獎時間：${time}</p>
-          <button onclick="redeem('${d.username}','${d.vendor}','${d.prize}')">
-            核銷
-          </button>
-        </div>`;
+      list.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const time = it.time ? new Date(it.time).toLocaleString() : '未核銷';
+        card.innerHTML = `
+          <p>分店：${it.storeId}</p>
+          <p>持有人：${it.username}</p>
+          <p>廠商：${it.vendor}</p>
+          <p>優惠：${it.prize}</p>
+          <p>狀態：${time}</p>
+          ${!it.time?'<button>核銷</button>':''}
+        `;
+        if (!it.time) {
+          card.querySelector('button').onclick = async () => {
+            await fetch(API, {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                action:'claim',
+                userId:USER_ID,
+                phone:'',        // phone 前端无需再次填写
+              })
+            });
+            loadCoupons();    // 刷新列表
+          };
+        }
+        container.appendChild(card);
       });
     }
 
-    function redeem(un,v,p){
-      // 这里可弹窗确认，再调用claim
-      alert(`核銷 ${v} - ${p} for ${un}`);
-      // TODO: 调用 claim api
+    async function loadCoupons() {
+      if (!USER_ID) await initLIFF();
+      if (!USER_ID) return;
+      document.getElementById('loginBtn').style.display = 'none';
+      // JSONP 方式也可，但普通 GET 也行（因无自定义 header）
+      const res = await fetch(`${API}?action=query&userId=${USER_ID}`);
+      const list = await res.json();
+      render(list);
     }
 
-    document.getElementById('btn').onclick = () => {
-      const cb = 'render';
-      const s = document.createElement('script');
-      s.src = `${API}?action=query&storeId=${storeId}&userId=${USER_ID}&callback=${cb}`;
-      document.body.appendChild(s);
-    };
+    document.getElementById('loadBtn').onclick = loadCoupons;
+    document.getElementById('loginBtn').onclick = () => liff.login();
 
-    window.onload = init;
+    window.addEventListener('DOMContentLoaded', initLIFF);
   </script>
 </body>
 </html>
