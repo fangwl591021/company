@@ -39,38 +39,36 @@
     let USER_ID;
 
     async function init() {
-      // 先取得管理界面專用 LIFF ID (設定 storeId 為 ADMIN)
+      // 取得管理用 LIFF ID（storeId=ADMIN）
       const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
       const { liffId } = await resp.json();
       if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
-      await liff.init({ liffId }); // 使用從後端拿到的 liffId // 確保 liffId 是從後端取得的管理 LIFF ID，storeId=ADMIN
+      // 初始化 LIFF
+      await liff.init({ liffId });
 
-      // 登入流程
+      // 未登入顯示登入按鈕
       if (!liff.isLoggedIn()) {
-        document.getElementById('loginBtn').style.display = 'block';
-        document.getElementById('loginBtn').onclick = () => liff.login();
+        const btn = document.getElementById('loginBtn');
+        btn.style.display = 'block';
+        btn.onclick = () => liff.login();
         return;
       }
+      // 已登入
       document.getElementById('loginBtn').style.display = 'none';
-
       const profile = await liff.getProfile();
       USER_ID = profile.userId;
 
-      // 載入所有店鋪選項
+      // 載入店鋪列表並顯示表單
       const stores = await fetch(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
       const sel = document.getElementById('storeSelect');
       stores.forEach(s => {
-        const o = document.createElement('option');
-        o.value = s.id;
-        o.textContent = `${s.id} ${s.name}`;
-        sel.appendChild(o);
+        const o = document.createElement('option'); o.value = s.id; o.textContent = `${s.id} ${s.name}`; sel.appendChild(o);
       });
       document.getElementById('form').style.display = 'block';
 
-      // 如果是管理員，載入待審核列表
-      if (['Udb7c5578b402bf6f1e0f7065fc57c17b','Uee955167d0b18f84a66906b550c9b292'].includes(USER_ID)) {
-        loadPending();
-      }
+      // 管理員審核
+      const admins = ['Udb7c5578b402bf6f1e0f7065fc57c17b','Uee955167d0b18f84a66906b550c9b292'];
+      if (admins.includes(USER_ID)) loadPending();
     }
 
     async function submitRequest() {
@@ -79,8 +77,7 @@
       const phone = document.getElementById('phone').value.trim();
       if (!sid || !name || !phone) return alert('請填完整');
       await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action:'registerRequest', storeId: sid, userId: USER_ID, name, phone })
+        method:'POST', body: JSON.stringify({ action:'registerRequest', storeId:sid, userId:USER_ID, name, phone })
       });
       document.getElementById('msg').textContent = '申請已送出，請等待核准';
     }
@@ -91,19 +88,16 @@
       list.forEach(req => {
         const li = document.createElement('li');
         li.textContent = `${req.storeId} ${req.name} (${req.phone}) `;
-        const btn = document.createElement('button');
-        btn.textContent = '核准';
+        const btn = document.createElement('button'); btn.textContent = '核准';
         btn.onclick = () => approve(req.storeId, req.userId);
-        li.appendChild(btn);
-        ul.appendChild(li);
+        li.appendChild(btn); ul.appendChild(li);
       });
       document.getElementById('pending').style.display = 'block';
     }
 
     async function approve(storeId, userId) {
       await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action:'approve', storeId, userId })
+        method:'POST', body: JSON.stringify({ action:'approve', storeId, userId })
       });
       loadPending();
     }
