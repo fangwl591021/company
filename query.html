@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>查詢我的優惠</title>
-  <link rel="stylesheet" href="static/css/style.css"/>
+  <link rel="stylesheet" href="/company/static/css/style.css"/>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; margin:0; padding:0; }
@@ -22,7 +22,7 @@
   <button id="queryBtn" disabled>載入中…</button>
   <ul id="list"></ul>
 
-  <script>
+  <script>window.liff||(console.error('LIFF SDK 未載入'));
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxdGgtQaXjV3sUJXSSqmY18lm07Tlz5lFmpObqpLp4AaU3ZLtueoq5Gtj4jreHfPKVm/exec';
     const params     = new URL(location).searchParams;
     const storeId    = params.get('storeId');
