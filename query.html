@@ -1,114 +1,71 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>🔍 我的優惠券</title>
   <style>
-    html,body{margin:0;padding:0;background:#000;color:#fff;
-      font-family:"Microsoft JhengHei";text-align:center}
-    #c{max-width:360px;margin:0 auto;padding:16px}
-    h1{margin-bottom:16px;color:gold;font-size:1.8rem}
-    button{width:100%;max-width:360px;padding:12px;margin:12px 0;
-      border:none;border-radius:8px;font-size:1rem;cursor:pointer}
-    #loginBtn{background:#00c300;color:#fff;display:none}
-    #queryBtn{background:#28a745;color:#fff;display:none}
-    .coupon,.redeemed{background:#222;text-align:left;
-      padding:12px;margin:8px 0;border-radius:8px}
-    .redeem-btn{display:block;width:100%;margin-top:8px;
-      padding:10px;border:none;border-radius:6px;
-      background:#009688;color:#fff;font-size:1rem;cursor:pointer}
-    .redeemed{background:#555;color:#ccc}
+    body { margin:0; padding:0; background:#000; color:#fff;
+      font-family:"Microsoft JhengHei"; text-align:center;}
+    h1{margin:24px 0; color:gold;}
+    button{padding:12px 24px;margin:12px auto;font-size:1rem;
+      background:#28a745;border:none;color:#fff;border-radius:8px;
+      display:block;cursor:pointer;}
+    .card{background:#333;margin:12px auto;padding:16px;
+      border-radius:8px;max-width:360px;text-align:left;}
   </style>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-  <div id="c">
-    <h1>🔍 我的優惠券</h1>
-    <button id="loginBtn">LINE 登入</button>
-    <button id="queryBtn">查詢我的優惠</button>
-    <div id="list"></div>
-  </div>
+  <h1>🔍 我的優惠券</h1>
+  <button id="btn">查詢我的優惠</button>
+  <div id="list"></div>
+
   <script>
-    const API    = 'https://script.google.com/macros/s/AKfycbwCVs6l8SxYZDPrtx530sSBlYA_nYf_14mPnTA8OacvWbvKCtx9BbBTz9NtWR3hGLk/exec';
-    const storeId= new URL(location).searchParams.get('storeId');
+    const API = 'https://script.google.com/macros/s/AKfycbwysJAZvf-dFwI1FUuj2CRa_h3_h9b5t7z4ijwyAIbJZmdQ4Bnz4Nbxk0Z_wRoFvPR1/exec';
+    const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID;
 
     async function init(){
-      const r = await fetch(`${API}?action=getLiffId&storeId=${storeId}`);
-      const { liffId } = await r.json();
-      if(!liffId) return alert('店家LIFF ID不存在');
-      await liff.init({ liffId });
-      if(!liff.isLoggedIn()){
-        document.getElementById('loginBtn').style.display='block';
-        document.getElementById('loginBtn').onclick=()=>liff.login();
-      } else {
-        const p = await liff.getProfile();
-        USER_ID = p.userId;
-        document.getElementById('queryBtn').style.display='block';
-        document.getElementById('queryBtn').onclick=fetchList;
+      await liff.init({ liffId:'你的LIFF_ID' });
+      if(!liff.isLoggedIn()) return liff.login();
+      const p = await liff.getProfile();
+      USER_ID = p.userId;
+    }
+
+    function render(data){
+      const cont = document.getElementById('list');
+      cont.innerHTML = '';
+      if(!data.length){
+        cont.innerHTML = '<p>目前沒有可核銷的優惠</p>';
+        return;
       }
-    }
-
-    async function fetchList(){
-      const r = await fetch(
-        `${API}?action=query&storeId=${storeId}&userId=${USER_ID}`
-      );
-      const { unredeemed, redeemed } = await r.json();
-      const list = document.getElementById('list');
-      list.innerHTML='';
-
-      // 已核銷
-      redeemed.forEach(c=>{
-        const d = new Date(c.redeemedAt).toLocaleString();
-        const div = document.createElement('div');
-        div.className='redeemed';
-        div.innerHTML=`${c.vendor}：${c.prize}<br>已核銷於：${d}`;
-        list.appendChild(div);
+      data.forEach(d=>{
+        const time = new Date(d.time).toLocaleString();
+        cont.innerHTML += `
+        <div class="card">
+          <p>☑️ ${d.username}</p>
+          <p>💌 ${d.vendor}：${d.prize}</p>
+          <p>⌚️ 中獎時間：${time}</p>
+          <button onclick="redeem('${d.username}','${d.vendor}','${d.prize}')">
+            核銷
+          </button>
+        </div>`;
       });
-
-      // 未核銷
-      if(!unredeemed.length){
-        const none = document.createElement('div');
-        none.textContent='目前沒有可核銷的優惠';
-        list.appendChild(none);
-      } else {
-        unredeemed.forEach(c=>{
-          const d = new Date(c.time).toLocaleString();
-          const div=document.createElement('div');
-          div.className='coupon';
-          div.innerHTML=`
-            使用者：${c.username}<br>
-            廠商：${c.vendor}<br>
-            獎品：${c.prize}<br>
-            中獎時間：${d}
-          `;
-          const btn=document.createElement('button');
-          btn.className='redeem-btn';
-          btn.textContent='核銷';
-          btn.onclick=()=>redeem(c);
-          div.appendChild(btn);
-          list.appendChild(div);
-        });
-      }
     }
 
-    async function redeem(c){
-      await fetch(API,{
-        method:'POST',mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({
-          action:'redeem',
-          storeId,
-          userId:USER_ID,
-          prize:c.prize,
-          time:c.time
-        })
-      });
-      fetchList();
+    function redeem(un,v,p){
+      // 这里可弹窗确认，再调用claim
+      alert(`核銷 ${v} - ${p} for ${un}`);
+      // TODO: 调用 claim api
     }
 
-    window.addEventListener('DOMContentLoaded',init);
+    document.getElementById('btn').onclick = () => {
+      const cb = 'render';
+      const s = document.createElement('script');
+      s.src = `${API}?action=query&storeId=${storeId}&userId=${USER_ID}&callback=${cb}`;
+      document.body.appendChild(s);
+    };
+
+    window.onload = init;
   </script>
 </body>
 </html>
