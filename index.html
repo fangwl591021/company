@@ -4,13 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <!-- 絕對路徑，引入 GitHub Pages 上的 CSS -->
-  <link rel="stylesheet" href="static/css/style.css" />
-  <!-- LIFF SDK：必須在呼叫 liff.init() 前載入 -->
+  <!-- 正確路徑，避免 GitHub Pages 404 -->
+  <link rel="stylesheet" href="./static/css/style.css" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    /* 補充內嵌樣式 (若需要) */
     #form { display: none; margin-top: 1rem; }
+    #play { display: none; }
   </style>
 </head>
 <body>
@@ -26,7 +25,7 @@
 
   <div id="form">
     <input id="username" placeholder="姓名" readonly />
-    <input id="phone" placeholder="手機" />
+    <input id="phone" placeholder="手機" type="tel" maxlength="10" />
     <div id="wrapSubmit" style="display:flex; justify-content:center; margin-top:12px;">
       <button id="submit" style="display:none;">送出</button>
     </div>
@@ -49,7 +48,7 @@
 
     async function init() {
       const liffId = await fetchLiffId(storeId);
-      if (!liffId) { alert('找不到對應的 LIFF ID'); return; }
+      if (!liffId) return alert('找不到對應的 LIFF ID');
 
       await liff.init({ liffId });
       if (!liff.isLoggedIn()) {
@@ -57,11 +56,11 @@
         document.getElementById('loginBtn').onclick = () => liff.login();
         return;
       }
-      // 已登入
+
       document.getElementById('loginBtn').style.display = 'none';
       PROFILE = await liff.getProfile();
       USER_ID = PROFILE.userId;
-      // 啟用抽獎按鈕
+
       const playBtn = document.getElementById('play');
       playBtn.textContent = '開始遊戲';
       playBtn.style.display = 'block';
@@ -70,49 +69,63 @@
 
     function showAnimation(seconds) {
       return new Promise(resolve => {
-        const playBtn = document.getElementById('play');
-        playBtn.style.display = 'none';
         const video = document.getElementById('mv');
+        const playBtn = document.getElementById('play');
+        playBtn.disabled = true;
+        playBtn.style.display = 'none';
+
         video.style.display = 'block';
         video.currentTime = 0;
         video.play();
-        setTimeout(() => { video.pause(); resolve(); }, seconds * 1000);
+
+        setTimeout(() => {
+          video.pause();
+          resolve();
+        }, seconds * 1000);
       });
     }
 
     async function handleDraw() {
       await showAnimation(7);
-      const res = await fetch(
-        `${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`,
-        { method: 'POST' }
-      );
+      const res = await fetch(`${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`, {
+        method: 'POST'
+      });
       const data = await res.json();
       const msgEl = document.getElementById('msg');
+
       if (data.error) {
         msgEl.textContent = `錯誤：${data.error}`;
         document.getElementById('play').style.display = 'block';
+        document.getElementById('play').disabled = false;
         return;
       }
-      msgEl.textContent = `恭喜獲得 ${data.vendor} 的 ${data.prize}`;
 
-      if (data.vendor) {
-        document.getElementById('winSound').play().catch(()=>{});
-        document.getElementById('form').style.display = 'block';
-        document.getElementById('username').value = PROFILE.displayName;
-        const submitBtn = document.getElementById('submit');
-        submitBtn.style.display = 'block';
-        submitBtn.onclick = handleSubmit;
-      }
+      msgEl.textContent = `🎉 恭喜獲得 ${data.vendor} 的 ${data.prize}`;
+      document.getElementById('winSound').play().catch(()=>{});
+      document.getElementById('form').style.display = 'block';
+      document.getElementById('username').value = PROFILE.displayName;
+
+      const submitBtn = document.getElementById('submit');
+      submitBtn.style.display = 'block';
+      submitBtn.onclick = handleSubmit;
     }
 
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
-      if (!phone) { alert('請填手機'); return; }
+      if (!phone.match(/^09\d{8}$/)) return alert('請填正確手機號碼');
+
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action:'claim', storeId, userId: USER_ID, name: PROFILE.displayName, phone })
+        body: JSON.stringify({
+          action: 'claim',
+          storeId,
+          userId: USER_ID,
+          name: PROFILE.displayName,
+          phone
+        })
       });
-      document.getElementById('msg').textContent = '✅ 已送出！';
+
+      document.getElementById('msg').textContent = '✅ 已送出中獎資料';
       const btn = document.getElementById('submit');
       btn.textContent = '關閉視窗';
       btn.onclick = () => liff.closeWindow();
