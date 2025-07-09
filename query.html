@@ -4,33 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
+  <!-- 絕對路徑，引入 GitHub Pages 上的 CSS -->
   <link rel="stylesheet" href="/company/static/css/style.css" />
+  <!-- LIFF SDK：必須在呼叫 liff.init() 前載入 -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; margin:0; padding:0; }
-    h1 { color:gold; margin:24px 0 12px; }
-    button { width:80%; max-width:320px; margin:12px auto; padding:14px 0; font-size:1.1em; border:none; border-radius:8px; cursor:pointer; }
-    #loginBtn { background:#00c300; color:#fff; display:none; }
-    #play { background:#28a745; color:#fff; display:none; }
-    #submit { background:#ffc107; color:#000; display:none; }
-    #wrapSubmit { display:flex; justify-content:center; }
-    video { width:100%; max-width:420px; border-radius:12px; display:none; margin-top:20px; }
-    input { width:80%; max-width:320px; padding:10px; margin:6px 0; border-radius:6px; border:none; font-size:1em; }
-    #msg { margin:18px 0 8px; font-size:1.4em; font-weight:bold; }
+    /* 補充內嵌樣式 (若需要) */
+    #form { display: none; margin-top: 1rem; }
   </style>
 </head>
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
   <button id="loginBtn">LINE 登入</button>
   <button id="play">載入中…</button>
-  <video id="mv" playsinline>
+
+  <video id="mv" playsinline style="display:none; width:100%; max-width:420px; border-radius:12px; margin-top:20px;">
     <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
   </video>
-  <div id="msg"></div>
+
+  <div id="msg" style="margin:18px 0 8px; font-size:1.4em; font-weight:bold;"></div>
+
   <div id="form">
     <input id="username" placeholder="姓名" readonly />
     <input id="phone" placeholder="手機" />
-    <div id="wrapSubmit"><button id="submit">送出</button></div>
+    <div id="wrapSubmit" style="display:flex; justify-content:center; margin-top:12px;">
+      <button id="submit" style="display:none;">送出</button>
+    </div>
   </div>
 
   <audio id="winSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
@@ -38,14 +37,14 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxdGgtQaXjV3sUJXSSqmY18lm07Tlz5lFmpObqpLp4AaU3ZLtueoq5Gtj4jreHfPKVm/exec';
-    const params     = new URL(location).searchParams;
-    const storeId    = params.get('storeId');
-    let USER_ID  = null;
-    let PROFILE  = null;
+    const storeId = new URL(location).searchParams.get('storeId');
+    let USER_ID = null;
+    let PROFILE = null;
 
     async function fetchLiffId(sid) {
       const res = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${sid}`);
-      return (await res.json()).liffId;
+      const data = await res.json();
+      return data.liffId;
     }
 
     async function init() {
@@ -58,17 +57,21 @@
         document.getElementById('loginBtn').onclick = () => liff.login();
         return;
       }
+      // 已登入
+      document.getElementById('loginBtn').style.display = 'none';
       PROFILE = await liff.getProfile();
       USER_ID = PROFILE.userId;
-      document.getElementById('loginBtn').style.display = 'none';
-      document.getElementById('play').style.display  = 'block';
-      document.getElementById('play').textContent   = '開始遊戲';
-      document.getElementById('play').onclick       = handleDraw;
+      // 啟用抽獎按鈕
+      const playBtn = document.getElementById('play');
+      playBtn.textContent = '開始遊戲';
+      playBtn.style.display = 'block';
+      playBtn.onclick = handleDraw;
     }
 
     function showAnimation(seconds) {
       return new Promise(resolve => {
-        document.getElementById('play').style.display = 'none';
+        const playBtn = document.getElementById('play');
+        playBtn.style.display = 'none';
         const video = document.getElementById('mv');
         video.style.display = 'block';
         video.currentTime = 0;
@@ -84,31 +87,35 @@
         { method: 'POST' }
       );
       const data = await res.json();
-      document.getElementById('msg').textContent = data.error ? `錯誤：${data.error}` : `恭喜獲得 ${data.vendor} 的 ${data.prize}`;
+      const msgEl = document.getElementById('msg');
+      if (data.error) {
+        msgEl.textContent = `錯誤：${data.error}`;
+        document.getElementById('play').style.display = 'block';
+        return;
+      }
+      msgEl.textContent = `恭喜獲得 ${data.vendor} 的 ${data.prize}`;
 
-      if (!data.error && data.vendor) {
+      if (data.vendor) {
         document.getElementById('winSound').play().catch(()=>{});
         document.getElementById('form').style.display = 'block';
-        document.getElementById('username').value    = PROFILE.displayName;
-        document.getElementById('submit').style.display = 'block';
-        document.getElementById('submit').onclick = handleSubmit;
-      } else {
-        document.getElementById('loseSound').play().catch(()=>{});
-        document.getElementById('play').style.display = 'block';
+        document.getElementById('username').value = PROFILE.displayName;
+        const submitBtn = document.getElementById('submit');
+        submitBtn.style.display = 'block';
+        submitBtn.onclick = handleSubmit;
       }
     }
 
     async function handleSubmit() {
-      const name  = document.getElementById('username').value.trim();
       const phone = document.getElementById('phone').value.trim();
       if (!phone) { alert('請填手機'); return; }
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action:'claim', storeId, userId: USER_ID, name, phone })
+        body: JSON.stringify({ action:'claim', storeId, userId: USER_ID, name: PROFILE.displayName, phone })
       });
       document.getElementById('msg').textContent = '✅ 已送出！';
-      document.getElementById('submit').textContent = '關閉視窗';
-      document.getElementById('submit').onclick = () => liff.closeWindow();
+      const btn = document.getElementById('submit');
+      btn.textContent = '關閉視窗';
+      btn.onclick = () => liff.closeWindow();
     }
 
     window.addEventListener('DOMContentLoaded', init);
