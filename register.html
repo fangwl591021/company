@@ -43,7 +43,7 @@
       const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
       const { liffId } = await resp.json();
       if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
-      await liff.init({ 2007161529-w3nJZpm0 }); // 確保 liffId 是從後端取得的管理 LIFF ID，storeId=ADMIN
+      await liff.init({ liffId }); // 使用從後端拿到的 liffId // 確保 liffId 是從後端取得的管理 LIFF ID，storeId=ADMIN
 
       // 登入流程
       if (!liff.isLoggedIn()) {
