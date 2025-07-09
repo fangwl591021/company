@@ -1,51 +1,97 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <link rel="stylesheet" href="/company/static/css/style.css">
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="/company/static/css/style.css" />
+  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
 </head>
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
   <button id="loginBtn" style="display:none">LINE 登入</button>
-  <button id="play" style="display:none">載入中…</button>
-  <video id="mv" playsinline style="display:none; width:100%; max-width:420px; border-radius:12px; margin-top:20px;">
-    <source src="https://voom-obs.line-scdn.net/.../mp4" type="video/mp4">
+  <button id="play" disabled>載入中…</button>
+
+  <video id="mv" playsinline style="display:none; width:90%; max-width:400px; margin-top:20px;">
+    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
   </video>
-  <div id="msg"></div>
+
+  <div id="msg" style="margin:1rem 0; font-size:1.2em; font-weight:bold;"></div>
+
   <div id="form" style="display:none">
-    <input id="username" placeholder="姓名" readonly>
-    <input id="phone" placeholder="手機">
-    <button id="submit" style="display:none">送出</button>
+    <input id="username" placeholder="姓名" readonly style="width:80%; max-width:320px; margin:0.5rem auto; display:block; padding:0.5rem;">
+    <input id="phone" placeholder="手機" style="width:80%; max-width:320px; margin:0.5rem auto; display:block; padding:0.5rem;">
+    <button id="submit" style="display:none; width:80%; max-width:320px; margin:1rem auto; padding:0.75rem; background:#28a745; color:#fff; border:none; border-radius:6px;">送出</button>
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwc_v2Gh2qxcGmDppOWbbz2Rq1IVt35PnfubrL4knJ6Q2iNFTCtX9Is0iIzRy5c5qHi/exec';
+    const API = 'https://script.google.com/macros/s/AKfycbwc_v2Gh2qxcGmDppOWbbz2Rq1IVt35PnfubrL4knJ6Q2iNFTCtX9Is0iIzRy5c5qHi/exec';
     const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID, PROFILE;
 
     async function init() {
-      const { liffId } = await (await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${storeId}`)).json();
-      await liff.init({ liffId });
-      if (!liff.isLoggedIn()) return document.getElementById('loginBtn').style.display = 'block', void(document.getElementById('loginBtn').onclick = () => liff.login());
-      PROFILE = await liff.getProfile(); USER_ID = PROFILE.userId;
+      // 初始化 LIFF
+      await liff.init({ liffId: '2007161529-oEeAzNVO' });
+      if (!liff.isLoggedIn()) {
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('loginBtn').onclick = () => liff.login();
+        return;
+      }
+      PROFILE = await liff.getProfile();
+      USER_ID = PROFILE.userId;
       document.getElementById('loginBtn').style.display = 'none';
-      const btn = document.getElementById('play'); btn.style.display='block'; btn.textContent='開始遊戲'; btn.onclick=handleDraw;
+
+      // 啟用「開始遊戲」按鈕
+      const btn = document.getElementById('play');
+      btn.disabled = false;
+      btn.textContent = '開始遊戲';
+      btn.onclick = handleDraw;
     }
 
-    function showAnimation(t) { return new Promise(r=>{const v=document.getElementById('mv'),p=document.getElementById('play');p.style.display='none';v.style.display='block';v.currentTime=0;v.play();setTimeout(()=>{v.pause();r()},t*1000)})}
+    function showAnimation() {
+      return new Promise(resolve => {
+        const btn = document.getElementById('play');
+        btn.style.display = 'none';
+        const video = document.getElementById('mv');
+        video.style.display = 'block';
+        video.currentTime = 0;
+        video.play();
+        setTimeout(() => { video.pause(); resolve(); }, 7000);
+      });
+    }
 
     async function handleDraw() {
-      await showAnimation(7);
-      const res = await fetch(`${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`,{method:'POST'}).then(r=>r.json());
-      if(res.error){document.getElementById('msg').textContent=`錯誤：${res.error}`;return}
-      document.getElementById('msg').textContent=`恭喜獲得 ${res.vendor} 的 ${res.prize}`;
-      document.getElementById('form').style.display='block'; document.getElementById('username').value=PROFILE.displayName;
-      const sb=document.getElementById('submit'); sb.style.display='block'; sb.onclick=handleSubmit;
+      await showAnimation();
+      const res = await fetch(API + `?action=draw&storeId=${storeId}&userId=${USER_ID}`, { method: 'POST' })
+        .then(r => r.json());
+      if (res.error) {
+        document.getElementById('msg').textContent = `錯誤：${res.error}`;
+        return;
+      }
+      document.getElementById('msg').textContent = `恭喜獲得 ${res.vendor} 的 ${res.prize}`;
+      document.getElementById('form').style.display = 'block';
+      document.getElementById('username').value = PROFILE.displayName;
+      document.getElementById('submit').style.display = 'block';
+      document.getElementById('submit').onclick = handleSubmit;
     }
-    async function handleSubmit(){const phone=document.getElementById('phone').value.trim();if(!phone)return alert('請填手機');await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'claim',storeId,userId:USER_ID,name:PROFILE.displayName,phone})});document.getElementById('msg').textContent='✅ 已送出！';document.getElementById('submit').onclick=()=>liff.closeWindow();}
+
+    async function handleSubmit() {
+      const phone = document.getElementById('phone').value.trim();
+      if (!phone) { alert('請填手機'); return; }
+      await fetch(API, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'claim',
+          storeId,
+          userId: USER_ID,
+          name: PROFILE.displayName,
+          phone
+        })
+      });
+      document.getElementById('msg').textContent = '✅ 已送出！';
+    }
 
     window.addEventListener('DOMContentLoaded', init);
   </script>
