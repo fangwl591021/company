@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>店家註冊申請</title>
-  <!-- 指向 GitHub Pages 正確絕對路徑 -->
-  <link rel="stylesheet" href="/company/static/css/style.css" />
+  <!-- 使用絕對路徑，若 static 資料夾在專案根目錄 -->
+  <link rel="stylesheet" href="/static/css/style.css" />
   <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
   <style>
@@ -41,10 +41,14 @@
     async function init() {
       // 取得管理用 LIFF ID（storeId=ADMIN）
       const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
-      const { liffId } = await resp.json();
-      if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
+      let { liffId } = await resp.json();
+      // 若後端無配置，則使用預設管理 LIFF ID
+      if (!liffId) {
+        console.warn('後端未回傳 ADMIN LIFF ID，使用預設值');
+        liffId = '2007161529-w3nJZpm0';
+      }
       // 初始化 LIFF
-      await liff.init({ liffId: liffId });
+      await liff.init({ liffId });
 
       // 未登入顯示登入按鈕
       if (!liff.isLoggedIn()) {
@@ -80,8 +84,7 @@
       const phone = document.getElementById('phone').value.trim();
       if (!sid || !name || !phone) return alert('請填完整');
       await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action:'registerRequest', storeId: sid, userId: USER_ID, name, phone })
+        method:'POST', body: JSON.stringify({ action:'registerRequest', storeId: sid, userId: USER_ID, name, phone })
       });
       document.getElementById('msg').textContent = '申請已送出，請等待核准';
     }
@@ -101,7 +104,7 @@
 
     async function approve(storeId, userId) {
       await fetch(SCRIPT_URL, {
-        method: 'POST', body: JSON.stringify({ action:'approve', storeId, userId })
+        method:'POST', body: JSON.stringify({ action:'approve', storeId, userId })
       });
       loadPending();
     }
