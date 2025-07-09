@@ -3,87 +3,59 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>🔍 我的優惠券</title>
-  <style>
-    body { margin:0; padding:0; background:#000; color:#fff;
-      font-family:"Microsoft JhengHei"; text-align:center}
-    h1{margin:24px 0;color:gold;}
-    button{padding:12px 24px;margin:12px auto;display:block;
-      background:#28a745;border:none;color:#fff;border-radius:8px;cursor:pointer;}
-    .card{background:#222;margin:12px auto;padding:16px;
-      border-radius:8px;max-width:360px;text-align:left;}
-    .card p{margin:4px 0;color:#fff;font-size:0.9rem}
-    .card button{margin-top:8px;padding:8px;display:block;width:100%;
-      border:none;border-radius:6px;background:#009688;color:#fff;cursor:pointer;}
-  </style>
+  <title>我的中獎紀錄</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-  <h1>🔍 我的優惠券</h1>
-  <button id="start">登入並查詢</button>
-  <div id="list"></div>
+  <h2>🎁 我的中獎紀錄</h2>
+  <div id="list">載入中…</div>
 
   <script>
-    const LIFF_ID = '2007161529-B4X1z4xl';  // 新的查詢 LIFF ID
-    const API     = 'https://script.google.com/macros/s/AKfycbwooOk6KjFuQywfjQ5mVxeCu2jAzk3z-NQNDOHV7Q0T1FdUtYCy36gJs7ysoNShbtjh/exec';
-
-    let USER_ID;
-
-    async function initLIFF() {
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) return liff.login();
-      const prof = await liff.getProfile();
-      USER_ID = prof.userId;
-      queryCoupons();
-    }
-
-    async function queryCoupons() {
-      const res  = await fetch(`${API}?action=query&userId=${USER_ID}`);
-      const list = await res.json();
-      render(list);
-    }
-
-    function render(list) {
-      const c = document.getElementById('list');
-      if (!list.length) {
-        c.innerHTML = '<p>目前沒有可核銷的優惠</p>';
+    (async ()=> {
+      const STORE_ID = new URL(location).searchParams.get('storeId');
+      // 1. 先從後端拿到對應 storeId 的 LIFF ID
+      const cfg = await fetch(`https://script.google.com/macros/s/…/exec?action=getLiffId&storeId=${STORE_ID}`)
+                     .then(r=>r.json());
+      if (!cfg.liffId) {
+        document.getElementById('list').textContent = '找不到此店家';
         return;
       }
-      c.innerHTML = '';
-      list.forEach(it => {
-        const t = it.time ? new Date(it.time).toLocaleString() : '未核銷';
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <p>分店：${it.storeId}</p>
-          <p>持有人：${it.username}</p>
-          <p>廠商：${it.vendor}</p>
-          <p>優惠：${it.prize}</p>
-          <p>狀態：${t}</p>
-          ${!it.time ? '<button>核銷</button>' : ''}
-        `;
-        if (!it.time) {
-          card.querySelector('button').onclick = () => redeem(it.storeId);
-        }
-        c.appendChild(card);
-      });
-    }
 
-    async function redeem(storeId) {
-      await fetch(API, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          action: 'claim',
-          storeId,
-          userId: USER_ID,
-          phone: ''
-        })
-      });
-      queryCoupons();
-    }
+      // 2. 初始化 LIFF
+      await liff.init({ liffId: cfg.liffId });
 
-    document.getElementById('start').onclick = initLIFF;
+      // 3. 清掉 URL 上多餘的 code/state
+      history.replaceState(null, '', `/company/query.html?storeId=${STORE_ID}`);
+
+      // 4. 確保登入
+      if (!liff.isLoggedIn()) {
+        return liff.login();  // 之後會自動重導到上面已清好的 URL
+      }
+
+      const profile = await liff.getProfile();
+      const uid     = profile.userId;
+
+      // 5. 查詢中獎紀錄
+      const res = await fetch('https://script.google.com/macros/s/AKfycbwooOk6KjFuQywfjQ5mVxeCu2jAzk3z-NQNDOHV7Q0T1FdUtYCy36gJs7ysoNShbtjh/exec', {
+        method: 'POST', mode: 'cors',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ action:'query', storeId: STORE_ID, userId: uid })
+      });
+      const { data, error } = await res.json();
+      if (error) {
+        document.getElementById('list').textContent = `錯誤：${error}`;
+      } else if (!data.length) {
+        document.getElementById('list').textContent = '目前沒有中獎紀錄';
+      } else {
+        document.getElementById('list').innerHTML = data.map(o => `
+          <div>
+            <strong>${o.username}</strong><br>
+            ${o.vendor}：${o.prize}<br>
+            領獎時間：${o.drawTime}
+          </div>
+        `).join('');
+      }
+    })();
   </script>
 </body>
 </html>
