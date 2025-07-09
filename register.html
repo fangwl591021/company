@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>店家註冊申請</title>
   <!-- 相對路徑載入 CSS -->
-  <link rel="stylesheet" href="/company/static/css/style.css" />
+  <link rel="stylesheet" href="static/css/style.css" />
   <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
@@ -43,7 +43,7 @@
       const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
       const { liffId } = await resp.json();
       if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
-      await liff.init({ 1656871455-vE1ZZLJ7 }); // 確保 liffId 是從後端取得的管理 LIFF ID，storeId=ADMIN
+      await liff.init({ 2007161529-w3nJZpm0 }); // 確保 liffId 是從後端取得的管理 LIFF ID，storeId=ADMIN
 
       // 登入流程
       if (!liff.isLoggedIn()) {
