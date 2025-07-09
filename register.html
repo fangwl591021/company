@@ -9,10 +9,11 @@
   <style>
     body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; margin:0; padding:0; }
     h1 { color:gold; margin:24px 0; }
-    select, input, button { width:80%; max-width:320px; margin:12px auto; display:block; padding:10px; font-size:1em; border:none; border-radius:6px; }
-    select, input { background:#222; color:#fff; }
+    input, button { width:80%; max-width:320px; margin:12px auto; display:block; padding:10px; font-size:1em; border:none; border-radius:6px; }
+    input { background:#222; color:#fff; }
     button { background:#28a745; color:#fff; cursor:pointer; }
     #msg { margin:16px 0; font-size:1.2em; }
+    #pending button { width:auto; margin-left:8px; }
   </style>
 </head>
 <body>
@@ -53,7 +54,6 @@
       const profile = await liff.getProfile();
       USER_ID = profile.userId;
 
-      // 不再預先塞入店鋪列表，由店家自行輸入名稱
       document.getElementById('form').style.display = 'block';
 
       const admins = ['Udb7c5578b402bf6f1e0f7065fc57c17b','Uee955167d0b18f84a66906b550c9b292'];
@@ -61,13 +61,13 @@
     }
 
     async function submitRequest() {
-      const sid = document.getElementById('storeSelect').value;
+      const storeName = document.getElementById('storeName').value.trim();
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
-      if (!sid || !name || !phone) return alert('請填完整');
+      if (!storeName || !name || !phone) return alert('請填完整');
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action:'registerRequest', storeId:sid, userId:USER_ID, name, phone })
+        body: JSON.stringify({ action: 'registerRequest', storeId: storeName, userId: USER_ID, name, phone })
       });
       document.getElementById('msg').textContent = '申請已送出，請等待核准';
     }
@@ -77,10 +77,11 @@
       const ul = document.getElementById('pendingList'); ul.innerHTML = '';
       list.forEach(req => {
         const li = document.createElement('li');
-        li.textContent = `${req.storeId} ${req.name} (${req.phone}) `;
+        li.textContent = `${req.storeId} ${req.name} (${req.phone})`;
         const btn = document.createElement('button'); btn.textContent = '核准';
         btn.onclick = () => approve(req.storeId, req.userId);
-        li.appendChild(btn); ul.appendChild(li);
+        li.appendChild(btn);
+        ul.appendChild(li);
       });
       document.getElementById('pending').style.display = 'block';
     }
@@ -88,7 +89,7 @@
     async function approve(storeId, userId) {
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action:'approve', storeId, userId })
+        body: JSON.stringify({ action: 'approve', storeId, userId })
       });
       loadPending();
     }
