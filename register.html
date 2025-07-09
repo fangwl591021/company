@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>店家註冊申請</title>
-  <!-- CSS 路徑改為相對 -->
+  <!-- 相對路徑載入 CSS -->
   <link rel="stylesheet" href="static/css/style.css" />
   <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>店家註冊申請</h1>
-  <button id="loginBtn" style="display:none;">LINE 登入</button>
+  <button id="loginBtn" style="display:none">LINE 登入</button>
   <div id="form" style="display:none">
     <select id="storeSelect">
       <option value="">選擇店鋪</option>
@@ -39,21 +39,24 @@
     let USER_ID;
 
     async function init() {
-      // 初始化 LIFF，使 liff 可用
-      await liff.init({ liffId: '你的管理LIFF_ID' });
+      // 先取得管理界面專用 LIFF ID (設定 storeId 為 ADMIN)
+      const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=ADMIN`);
+      const { liffId } = await resp.json();
+      if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
+      await liff.init({ liffId });
+
+      // 登入流程
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
         document.getElementById('loginBtn').onclick = () => liff.login();
         return;
       }
       document.getElementById('loginBtn').style.display = 'none';
-      USER_ID = (await liff.getProfile()).userId;
-      loadStores();
-      if (await isAdmin(USER_ID)) loadPending();
-      document.getElementById('form').style.display = 'block';
-    }
 
-    async function loadStores() {
+      const profile = await liff.getProfile();
+      USER_ID = profile.userId;
+
+      // 載入所有店鋪選項
       const stores = await fetch(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
       const sel = document.getElementById('storeSelect');
       stores.forEach(s => {
@@ -62,6 +65,12 @@
         o.textContent = `${s.id} ${s.name}`;
         sel.appendChild(o);
       });
+      document.getElementById('form').style.display = 'block';
+
+      // 如果是管理員，載入待審核列表
+      if (['Udb7c5578b402bf6f1e0f7065fc57c17b','Uee955167d0b18f84a66906b550c9b292'].includes(USER_ID)) {
+        loadPending();
+      }
     }
 
     async function submitRequest() {
@@ -71,7 +80,7 @@
       if (!sid || !name || !phone) return alert('請填完整');
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action:'registerRequest', storeId:sid, userId:USER_ID, name, phone })
+        body: JSON.stringify({ action:'registerRequest', storeId: sid, userId: USER_ID, name, phone })
       });
       document.getElementById('msg').textContent = '申請已送出，請等待核准';
     }
@@ -97,11 +106,6 @@
         body: JSON.stringify({ action:'approve', storeId, userId })
       });
       loadPending();
-    }
-
-    async function isAdmin(userId) {
-      const admins = ['Udb7c5578b402bf6f1e0f7065fc57c17b','Uee955167d0b18f84a66906b550c9b292'];
-      return admins.includes(userId);
     }
 
     document.getElementById('submitBtn').onclick = submitRequest;
