@@ -6,8 +6,10 @@
   <title>🎰 轉轉小瑪莉</title>
   <style>
     html, body {
-      margin: 0; padding: 0;
-      background: #000; color: #fff;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
       font-family: "Microsoft JhengHei", sans-serif;
       text-align: center;
     }
@@ -19,38 +21,58 @@
     h1 {
       margin: 24px 0;
       font-size: 2rem;
+      color: gold;
     }
     button {
-      width: 100%; max-width: 360px;
+      width: 100%;
+      max-width: 360px;
       margin: 12px 0;
       padding: 12px 0;
       font-size: 1rem;
-      border: none; border-radius: 8px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
     }
-    #loginBtn { background: #00c300; color: #fff; display: none; }
-    #play     { background: #28a745; color: #fff; display: none; }
-     video {
-  max-width: 280px;  /* 最大寬度 320px */
-  width: 100%;       /* 寬度佔滿父容器 */
-  height: auto;      /* 高度自動 */
-}
-
+    #loginBtn {
+      background: #00c300;
+      color: #fff;
+      display: none;
+    }
+    #play {
+      background: #28a745;
+      color: #fff;
+      display: none;
+    }
+    video {
+      display: block;           /* 块级元素才能 margin auto 水平置中 */
+      margin: 20px auto;        /* 上下 20px，左右 auto */
+      width: 100%;
+      max-width: 280px;         /* 影片最大宽度 */
+      border-radius: 12px;
+    }
     #msg {
-      margin: 16px 0; font-size: 1.2rem; font-weight: bold;
+      margin: 16px 0;
+      font-size: 1.2rem;
+      font-weight: bold;
     }
     #form {
-      display: none; margin-top: 16px;
+      display: none;
+      margin-top: 16px;
     }
     #form input {
-      width: 100%; max-width: 360px;
-      padding: 10px; margin: 6px 0;
-      border: none; border-radius: 6px;
-      background: #fff; color: #000;
+      width: 100%;
+      max-width: 360px;
+      padding: 10px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 6px;
+      background: #fff;         /* 白底 */
+      color: #000;              /* 黑字 */
       font-size: 1rem;
     }
     #submit {
-      background: #ffc107; color: #000;
+      background: #ffc107;
+      color: #000;
       display: none;
     }
   </style>
@@ -93,15 +115,13 @@
     }
 
     async function init() {
-      // 1. 取得 LIFF ID
       const liffId = await fetchLiffId(storeId);
       if (!liffId) {
         alert('無效的 storeId，請聯絡管理員');
         return;
       }
-      // 2. 初始化 LIFF
       await liff.init({ liffId });
-      // 3. 登入檢查
+
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
         document.getElementById('loginBtn').onclick = () => liff.login();
@@ -111,7 +131,6 @@
       USER_ID = PROFILE.userId;
       document.getElementById('loginBtn').style.display = 'none';
 
-      // 4. 啟用「開始遊戲」
       const play = document.getElementById('play');
       play.style.display   = 'block';
       play.disabled        = false;
@@ -133,7 +152,6 @@
 
     async function handleDraw() {
       await showAnimation();
-      // POST draw
       await fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
@@ -147,9 +165,10 @@
       document.getElementById('winSound').play().catch(()=>{});
       document.getElementById('msg').textContent = '🎊 恭喜中獎！';
       document.getElementById('form').style.display = 'block';
-      document.getElementById('username').value = PROFILE.displayName;
-      document.getElementById('submit').style.display = 'block';
-      document.getElementById('submit').onclick    = handleSubmit;
+      document.getElementById('username').value    = PROFILE.displayName;
+      const btn = document.getElementById('submit');
+      btn.style.display = 'block';
+      btn.onclick       = handleSubmit;
     }
 
     async function handleSubmit() {
@@ -163,7 +182,7 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           action:  'claim',
-          storeId: storeId,
+          storeId,
           userId:  USER_ID,
           phone
         })
