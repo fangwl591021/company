@@ -1,74 +1,77 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <link rel="stylesheet" href="/company/static/css/style.css"/>
+  <!-- 原先的 CSS -->
+  <link rel="stylesheet" href="/company/static/css/style.css" />
+  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
 </head>
 <body>
-  <!-- 更新標題文字 -->
   <h1>🎰 轉轉小瑪莉</h1>
-
   <button id="loginBtn" style="display:none;
-         width:80%;max-width:320px;margin:12px auto;
-         padding:14px 0;font-size:1.1em;border:none;
-         border-radius:8px;background:#00c300;color:#fff;">
+         width:80%; max-width:320px; margin:12px auto;
+         padding:14px 0; font-size:1.1em; border:none;
+         border-radius:8px; background:#00c300; color:#fff;">
     LINE 登入
   </button>
   <button id="play" disabled style="display:none;
-         width:80%;max-width:320px;margin:12px auto;
-         padding:14px 0;font-size:1.1em;border:none;
-         border-radius:8px;background:#28a745;color:#fff;">
+         width:80%; max-width:320px; margin:12px auto;
+         padding:14px 0; font-size:1.1em; border:none;
+         border-radius:8px; background:#28a745; color:#fff;">
     載入中…
   </button>
 
   <video id="mv" playsinline
-         style="display:none;width:100%;max-width:420px;
-                margin:20px auto;border-radius:12px;display:block;">
-    <source src="https://voom-obs.line-scdn.net/.../mp4" type="video/mp4">
+         style="display:none; width:100%; max-width:420px;
+                border-radius:12px; margin:20px auto; display:block;">
+    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4"
+            type="video/mp4">
   </video>
 
-  <div id="msg" style="margin:18px 0;
-                     font-size:1.4em;font-weight:bold;
-                     text-align:center;">
-  </div>
+  <div id="msg" style="margin:18px 0 8px;
+                     font-size:1.4em; font-weight:bold;
+                     text-align:center;"></div>
 
-  <div id="form" style="display:none;text-align:center;">
+  <div id="form" style="display:none; text-align:center;">
     <input id="username" placeholder="姓名" readonly
-           style="width:80%;max-width:320px;
-                  padding:10px;margin:6px 0;
-                  border:none;border-radius:6px;
-                  background:#222;color:#fff;"/>
+           style="width:80%; max-width:320px;
+                  padding:10px; margin:6px 0;
+                  border:none; border-radius:6px;
+                  font-size:1em; background:#222; color:#fff;" />
     <input id="phone" placeholder="手機"
-           style="width:80%;max-width:320px;
-                  padding:10px;margin:6px 0;
-                  border:none;border-radius:6px;
-                  background:#222;color:#fff;"/>
-    <div style="display:flex;justify-content:center;">
+           style="width:80%; max-width:320px;
+                  padding:10px; margin:6px 0;
+                  border:none; border-radius:6px;
+                  font-size:1em; background:#222; color:#fff;" />
+    <div style="display:flex; justify-content:center;">
       <button id="submit" style="display:none;
-             width:80%;max-width:320px;
-             padding:14px 0;font-size:1.1em;
-             border:none;border-radius:8px;
-             background:#ffc107;color:#000;
-             margin-top:12px;">
+             width:80%; max-width:320px;
+             margin-top:12px; padding:14px 0;
+             font-size:1.1em; border:none;
+             border-radius:8px; background:#ffc107;
+             color:#000;">
         送出
       </button>
     </div>
   </div>
 
   <audio id="winSound" preload="auto"
-         src="https://aiwe.cc/.../win.mp3"></audio>
+         src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3">
+  </audio>
   <audio id="loseSound" preload="auto"
-         src="https://aiwe.cc/.../lose.mp3"></audio>
+         src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3">
+  </audio>
 
   <script>
-    const API     = 'https://script.google.com/macros/s/AKfycbx8kk0SFLNVQTtbqUWkg8h2j_fTrtxu-BTkr2VlZPhzo5WwSNQMJIRE0Rip3e6GQ9H9/exec';
+    const API = 'https://script.google.com/macros/s/AKfycbx8kk0SFLNVQTtbqUWkg8h2j_fTrtxu-BTkr2VlZPhzo5WwSNQMJIRE0Rip3e6GQ9H9/exec';
     const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID, PROFILE;
 
     async function init() {
+      // 初始化 LIFF
       await liff.init({ liffId: '2007161529-oEeAzNVO' });
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
@@ -76,38 +79,44 @@
         return;
       }
       PROFILE = await liff.getProfile();
-      USER_ID  = PROFILE.userId;
+      USER_ID = PROFILE.userId;
       document.getElementById('loginBtn').style.display = 'none';
 
+      // 啟用「開始遊戲」按鈕
       const btn = document.getElementById('play');
-      btn.disabled   = false;
+      btn.disabled = false;
       btn.style.display = 'block';
-      btn.textContent   = '開始遊戲';
-      btn.onclick     = handleDraw;
+      btn.textContent = '開始遊戲';
+      btn.onclick = handleDraw;
     }
 
     function showAnimation() {
       return new Promise(resolve => {
         const btn = document.getElementById('play');
         btn.style.display = 'none';
-        const v  = document.getElementById('mv');
-        v.style.display   = 'block';
-        v.currentTime     = 0;
-        v.play();
-        setTimeout(()=>{ v.pause(); resolve(); }, 7000);
+        const video = document.getElementById('mv');
+        video.style.display = 'block';
+        video.currentTime = 0;
+        video.play();
+        setTimeout(() => { video.pause(); resolve(); }, 7000);
       });
     }
 
     async function handleDraw() {
       await showAnimation();
-      // POST draw
+      // POST 不帶預檢
       await fetch(API, {
         method: 'POST',
-        mode:   'no-cors',
-        headers:{ 'Content-Type':'text/plain' },
-        body:   JSON.stringify({ action:'draw', storeId, userId:USER_ID })
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'draw',
+          storeId,
+          userId: USER_ID
+        })
       });
-      // 播贏音效
+
+      // 播放音效
       document.getElementById('winSound').play().catch(()=>{});
       document.getElementById('msg').textContent = '🎊 恭喜中獎！';
       document.getElementById('form').style.display = 'block';
@@ -119,14 +128,14 @@
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
       if (!phone) { alert('請填手機'); return; }
-      // POST claim
       await fetch(API, {
         method: 'POST',
-        mode:   'no-cors',
-        headers:{ 'Content-Type':'text/plain' },
-        body:   JSON.stringify({
-          action:  'claim',
-          storeId, userId:USER_ID,
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'claim',
+          storeId,
+          userId: USER_ID,
           name: PROFILE.displayName,
           phone
         })
@@ -138,3 +147,5 @@
   </script>
 </body>
 </html>
+
+
