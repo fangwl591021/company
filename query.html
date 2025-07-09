@@ -5,8 +5,8 @@
   <title>🔍 我的優惠券（JSONP 版）</title>
   <style>
     body { margin:0; padding:0; background:#000; color:#fff;
-      font-family:"Microsoft JhengHei"; text-align:center;}
-    h1{margin:24px 0; color:gold;}
+      font-family:"Microsoft JhengHei"; text-align:center}
+    h1{margin:24px 0;color:gold;}
     button{padding:12px 24px;margin:12px auto;display:block;
       background:#28a745;border:none;color:#fff;border-radius:8px;cursor:pointer;}
     .card{background:#222;margin:12px auto;padding:16px;
@@ -19,86 +19,81 @@
 </head>
 <body>
   <h1>🔍 我的優惠券</h1>
-  <button id="start">登入 & 查詢優惠券</button>
+  <button id="start">登入並查詢</button>
   <div id="list"></div>
 
   <script>
-    // 请替换成你的 Apps Script URL
     const API = 'https://script.google.com/macros/s/AKfycbzzFMCs4J79zh1AdanFffAe3Ezenony3I2pDsWv2OGO5XR9pWyDyfWOF77CMOjbPaLQ/exec';
     let USER_ID;
 
-    // JSONP 回调：初始化 LIFF，然后查询
-    function initLiff(resp) {
-      const liffId = resp.liffId;
-      if (!liffId) return alert('找不到 LIFF ID');
-      liff.init({ liffId }).then(() => {
-        if (!liff.isLoggedIn()) return liff.login();
-        return liff.getProfile();
-      }).then(profile => {
-        USER_ID = profile.userId;
-        queryCoupons();
+    // 动态插入 JSONP 脚本
+    function jsonp(url) {
+      return new Promise(resolve => {
+        const cb = 'cb' + Date.now();
+        window[cb] = data => { resolve(data); delete window[cb]; };
+        const s = document.createElement('script');
+        s.src = url + '&callback=' + cb;
+        document.body.appendChild(s);
       });
     }
 
-    // JSONP 回调：渲染优惠券列表
-    function renderCoupons(data) {
+    // 1. 先拿 LIFF ID，用 JSONP
+    async function initLIFF() {
+      const { liffId } = await jsonp(`${API}?action=getLiffId&storeId=ADMIN`);
+      if (!liffId) return alert('找不到 LIFF ID');
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      const prof = await liff.getProfile();
+      USER_ID = prof.userId;
+      queryCoupons();
+    }
+
+    // 2. 拿优惠券
+    async function queryCoupons() {
+      const data = await jsonp(`${API}?action=query&userId=${USER_ID}`);
+      render(data);
+    }
+
+    // 3. 渲染列表
+    function render(list) {
       const container = document.getElementById('list');
       container.innerHTML = '';
-      if (!data.length) {
+      if (!list.length) {
         container.innerHTML = '<p>目前沒有可核銷的優惠</p>';
         return;
       }
-      data.forEach(item => {
-        const t = item.time ? new Date(item.time).toLocaleString() : '未核銷';
+      list.forEach(it => {
+        const t = it.time ? new Date(it.time).toLocaleString() : '未核銷';
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-          <p>分店：${item.storeId}</p>
-          <p>持有人：${item.username}</p>
-          <p>廠商：${item.vendor}</p>
-          <p>優惠：${item.prize}</p>
+          <p>分店：${it.storeId}</p>
+          <p>持有人：${it.username}</p>
+          <p>廠商：${it.vendor}</p>
+          <p>優惠：${it.prize}</p>
           <p>狀態：${t}</p>
-          ${!item.time ? '<button>核銷</button>' : ''}
+          ${!it.time?'<button>核銷</button>':''}
         `;
-        if (!item.time) {
+        if (!it.time) {
           card.querySelector('button').onclick = () => {
-            // 再用 JSONP 调 claim，就不需要 CORS 了
-            const cb = 'afterClaim';
-            const script = document.createElement('script');
-            script.src = `${API}?action=claim`
-                       +`&storeId=${item.storeId}`
-                       +`&userId=${USER_ID}`
-                       +`&phone=${item.phone||''}`
-                       +`&callback=${cb}`;
-            document.body.appendChild(script);
+            redeem(it.storeId);
           };
         }
         container.appendChild(card);
       });
     }
 
-    // Claim JSONP 回调：核销后刷新列表
-    function afterClaim(resp) {
+    // 4. 核銷
+    async function redeem(storeId) {
+      const resp = await jsonp(`${API}?action=claim&storeId=${storeId}&userId=${USER_ID}&phone=`);
       if (resp.success) queryCoupons();
       else alert('核銷失敗：' + resp.error);
     }
 
-    // 发起查询 JSONP
-    function queryCoupons() {
-      const cb = 'renderCoupons';
-      const script = document.createElement('script');
-      script.src = `${API}?action=query`
-                 +`&userId=${USER_ID}`
-                 +`&callback=${cb}`;
-      document.body.appendChild(script);
-    }
-
-    // 点击按钮：先 GET LIFF ID，再走 initLiff
-    document.getElementById('start').onclick = () => {
-      const script = document.createElement('script');
-      script.src = `${API}?action=getLiffId&storeId=ADMIN&callback=initLiff`;
-      document.body.appendChild(script);
-    };
+    document.getElementById('start').onclick = initLIFF;
   </script>
 </body>
 </html>
