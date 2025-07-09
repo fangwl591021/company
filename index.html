@@ -30,13 +30,12 @@
     }
     #loginBtn { background: #00c300; color: #fff; display: none; }
     #play     { background: #28a745; color: #fff; display: none; }
-    video {
-    display: block;
-    margin: 20px center;
-    width: 100%;
-    max-width: 280px;
-    border-radius: 12px;
-  }
+     video {
+  max-width: 280px;  /* 最大寬度 320px */
+  width: 100%;       /* 寬度佔滿父容器 */
+  height: auto;      /* 高度自動 */
+}
+
     #msg {
       margin: 16px 0; font-size: 1.2rem; font-weight: bold;
     }
@@ -83,7 +82,7 @@
          src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCVs6l8SxYZDPrtx530sSBlYA_nYf_14mPnTA8OacvWbvKCtx9BbBTz9NtWR3hGLk/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXt_v1XqQWDIeCQxU0Ys8h-YDTmi04SuvO6iQwdFISS7QzONIjx7QmOwTtFFUzIP9U/exec';
     const storeId    = new URL(location).searchParams.get('storeId');
     let USER_ID, PROFILE;
 
@@ -176,5 +175,3 @@
   </script>
 </body>
 </html>
-
-
