@@ -63,7 +63,9 @@
       USER_ID = profile.userId;
 
       // 載入店鋪列表並顯示表單
-      let stores = await fetch(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
+      let storesRes = await fetch(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
+      let stores = Array.isArray(storesRes) ? storesRes : (storesRes.data || []);
+      if (!Array.isArray(stores)) stores = []; // 防護(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
       const sel = document.getElementById('storeSelect');
       stores.forEach(s => {
         const o = document.createElement('option');
