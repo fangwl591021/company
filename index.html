@@ -4,32 +4,66 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <!-- 引入原先的 CSS -->
+  <!-- 原先的 CSS -->
   <link rel="stylesheet" href="/company/static/css/style.css" />
   <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
 </head>
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
-  <button id="loginBtn" style="display:none; width:80%;max-width:320px;margin:12px auto;padding:14px 0;font-size:1.1em;border:none;border-radius:8px;background:#00c300;color:#fff;">LINE 登入</button>
-  <button id="play" disabled style="width:80%;max-width:320px;margin:12px auto;padding:14px 0;font-size:1.1em;border:none;border-radius:8px;background:#28a745;color:#fff;display:none;">載入中…</button>
+  <button id="loginBtn" style="display:none;
+         width:80%; max-width:320px; margin:12px auto;
+         padding:14px 0; font-size:1.1em; border:none;
+         border-radius:8px; background:#00c300; color:#fff;">
+    LINE 登入
+  </button>
+  <button id="play" disabled style="display:none;
+         width:80%; max-width:320px; margin:12px auto;
+         padding:14px 0; font-size:1.1em; border:none;
+         border-radius:8px; background:#28a745; color:#fff;">
+    載入中…
+  </button>
 
-  <video id="mv" playsinline style="display:none;width:100%;max-width:420px;border-radius:12px;margin:20px auto;display:block;">
-    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
+  <video id="mv" playsinline
+         style="display:none; width:100%; max-width:420px;
+                border-radius:12px; margin:20px auto; display:block;">
+    <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4"
+            type="video/mp4">
   </video>
 
-  <div id="msg" style="margin:18px 0 8px;font-size:1.4em;font-weight:bold;text-align:center;"></div>
+  <div id="msg" style="margin:18px 0 8px;
+                     font-size:1.4em; font-weight:bold;
+                     text-align:center;"></div>
 
-  <div id="form" style="display:none;text-align:center;">
-    <input id="username" placeholder="姓名" readonly style="width:80%;max-width:320px;padding:10px;margin:6px 0;border:none;border-radius:6px;font-size:1em;background:#222;color:#fff;" />
-    <input id="phone" placeholder="手機" style="width:80%;max-width:320px;padding:10px;margin:6px 0;border:none;border-radius:6px;font-size:1em;background:#222;color:#fff;" />
-    <div style="display:flex;justify-content:center;">
-      <button id="submit" style="display:none;width:80%;max-width:320px;padding:14px 0;font-size:1.1em;border:none;border-radius:8px;background:#ffc107;color:#000;margin-top:12px;">送出</button>
+  <div id="form" style="display:none; text-align:center;">
+    <input id="username" placeholder="姓名" readonly
+           style="width:80%; max-width:320px;
+                  padding:10px; margin:6px 0;
+                  border:none; border-radius:6px;
+                  font-size:1em; background:#222; color:#fff;" />
+    <input id="phone" placeholder="手機"
+           style="width:80%; max-width:320px;
+                  padding:10px; margin:6px 0;
+                  border:none; border-radius:6px;
+                  font-size:1em; background:#222; color:#fff;" />
+    <div style="display:flex; justify-content:center;">
+      <button id="submit" style="display:none;
+             width:80%; max-width:320px;
+             margin-top:12px; padding:14px 0;
+             font-size:1.1em; border:none;
+             border-radius:8px; background:#ffc107;
+             color:#000;">
+        送出
+      </button>
     </div>
   </div>
 
-  <audio id="winSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
-  <audio id="loseSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
+  <audio id="winSound" preload="auto"
+         src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3">
+  </audio>
+  <audio id="loseSound" preload="auto"
+         src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3">
+  </audio>
 
   <script>
     const API = 'https://script.google.com/macros/s/AKfycbwc_v2Gh2qxcGmDppOWbbz2Rq1IVt35PnfubrL4knJ6Q2iNFTCtX9Is0iIzRy5c5qHi/exec';
@@ -37,7 +71,7 @@
     let USER_ID, PROFILE;
 
     async function init() {
-      // LIFF 初始化
+      // 初始化 LIFF
       await liff.init({ liffId: '2007161529-oEeAzNVO' });
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
@@ -48,7 +82,7 @@
       USER_ID = PROFILE.userId;
       document.getElementById('loginBtn').style.display = 'none';
 
-      // 啟用開始遊戲
+      // 啟用「開始遊戲」按鈕
       const btn = document.getElementById('play');
       btn.disabled = false;
       btn.style.display = 'block';
@@ -70,32 +104,42 @@
 
     async function handleDraw() {
       await showAnimation();
-      // GET 請求避免 CORS
-      const res = await fetch(`${API}?action=draw&storeId=${storeId}&userId=${USER_ID}`)
-        .then(r => r.json());
-      const msgEl = document.getElementById('msg');
-      if (res.error) {
-        msgEl.textContent = `錯誤：${res.error}`;
-        document.getElementById('play').style.display = 'block';
-        return;
-      }
+      // POST 不帶預檢
+      await fetch(API, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'draw',
+          storeId,
+          userId: USER_ID
+        })
+      });
+
       // 播放音效
       document.getElementById('winSound').play().catch(()=>{});
-      msgEl.textContent = `🎊 恭喜獲得 ${res.vendor} 的 ${res.prize}`;
-      // 顯示表單
+      document.getElementById('msg').textContent = '🎊 恭喜中獎！';
       document.getElementById('form').style.display = 'block';
       document.getElementById('username').value = PROFILE.displayName;
-      const sb = document.getElementById('submit');
-      sb.style.display = 'block';
-      sb.onclick = handleSubmit;
+      document.getElementById('submit').style.display = 'block';
+      document.getElementById('submit').onclick = handleSubmit;
     }
 
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
       if (!phone) { alert('請填手機'); return; }
-      // GET 兌換
-      await fetch(`${API}?action=claim&storeId=${storeId}&userId=${USER_ID}&name=${encodeURIComponent(PROFILE.displayName)}&phone=${encodeURIComponent(phone)}`)
-        .then(r => r.json());
+      await fetch(API, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'claim',
+          storeId,
+          userId: USER_ID,
+          name: PROFILE.displayName,
+          phone
+        })
+      });
       document.getElementById('msg').textContent = '✅ 已送出！';
     }
 
