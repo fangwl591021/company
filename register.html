@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>店家註冊申請</title>
-  <!-- 相對路徑載入 CSS -->
-  <link rel="stylesheet" href="static/css/style.css" />
+  <!-- 指向 GitHub Pages 正確絕對路徑 -->
+  <link rel="stylesheet" href="/company/static/css/style.css" />
   <!-- LIFF SDK -->
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
   <style>
     body { background:#000; color:#fff; text-align:center; font-family:"Microsoft JhengHei"; margin:0; padding:0; }
     h1 { color:gold; margin:24px 0; }
@@ -44,7 +44,7 @@
       const { liffId } = await resp.json();
       if (!liffId) return alert('缺少管理 LIFF ID，請聯絡系統管理員');
       // 初始化 LIFF
-      await liff.init({ liffId });
+      await liff.init({ liffId: liffId });
 
       // 未登入顯示登入按鈕
       if (!liff.isLoggedIn()) {
@@ -101,8 +101,7 @@
 
     async function approve(storeId, userId) {
       await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action:'approve', storeId, userId })
+        method: 'POST', body: JSON.stringify({ action:'approve', storeId, userId })
       });
       loadPending();
     }
