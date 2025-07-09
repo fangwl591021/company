@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>我的中獎紀錄</title>
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:"Microsoft JhengHei"; padding:16px; }
+    h2 { text-align:center; color:#ffd700; margin-bottom:16px; }
+    .loading, .error { text-align:center; margin:20px 0; color:#ccc; }
+    .card { background:#333; padding:12px; margin:12px 0; border-radius:8px; }
+    .card h3 { margin:0 0 8px; color:#fff; }
+    .info { font-size:.9em; line-height:1.4; }
+    .redeemBtn { width:100%; padding:10px; margin-top:8px; border:none; border-radius:6px;
+                 background:#ffc107; color:#000; font-size:1em; }
+    .redeemBtn.done { background:#666; color:#bbb; cursor:not-allowed; }
+    .back { position:fixed; top:12px; left:12px; background:#007bff; color:#fff;
+            border:none; padding:8px 12px; border-radius:5px; }
+  </style>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <button class="back" onclick="history.back()">← 返回</button>
+  <h2>🎁 我的中獎紀錄</h2>
+  <div id="list"><div class="loading">載入中…</div></div>
+
+  <script>
+    const LIFF_ID = '1656871455-vE1ZZLJ7';
+    const API     = 'https://script.google.com/macros/s/AKfycbye0vEqvFln5zd2d2FA2T-odEjq95thpRqDddvzgspzzmDvBmQRnWXO6ou3MRDSpFfu/exec';
+
+    async function init() {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) return liff.login();
+      const uid = (await liff.getProfile()).userId;
+      loadRecords(uid);
+    }
+
+    async function loadRecords(uid) {
+      const list = document.getElementById('list');
+      list.innerHTML = '<div class="loading">載入中…</div>';
+      try {
+        const res = await fetch(API, {
+          method: 'POST', mode: 'cors',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ act:'query', userId: uid })
+        });
+        if (!res.ok) throw new Error(res.status);
+        const j = await res.json();
+        if (j.status!=='ok') throw new Error(j.message||'後端錯誤');
+        render(j.data);
+      } catch(err) {
+        list.innerHTML = `<div class="error">讀取失敗：${err.message}</div>`;
+      }
+    }
+
+    function render(arr) {
+      const list = document.getElementById('list');
+      if (!arr || !arr.length) {
+        list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
+        return;
+      }
+      list.innerHTML = arr.map(o=>`
+        <div class="card" id="c${o.row}">
+          <h3>${o.lineName}</h3>
+          <div class="info">
+            中獎時間：${o.winTime}<br>
+            遊戲名稱：${o.game}<br>
+            優惠內容：${o.prize}
+          </div>
+          ${o.isRedeem
+            ? `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`
+            : `<button class="redeemBtn" onclick="redeem(${o.row}, this)">核銷</button>`}
+        </div>`).join('');
+    }
+
+    async function redeem(row, btn) {
+      btn.disabled = true; btn.textContent='處理中…';
+      try {
+        const res = await fetch(API, {
+          method:'POST', mode:'cors',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ act:'redeem', row })
+        });
+        const j = await res.json();
+        if (j.status!=='ok') throw new Error(j.message);
+        btn.className='redeemBtn done';
+        btn.innerHTML=`已核銷<br>${j.data}`;
+      } catch(e) {
+        alert('核銷失敗：'+e.message);
+        btn.disabled=false; btn.textContent='核銷';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
