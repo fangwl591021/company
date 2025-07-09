@@ -1,70 +1,87 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>🎰 轉轉小瑪莉</title>
+
+  <!-- 全域樣式 -->
   <style>
     html, body {
       margin: 0; padding: 0;
-      background: #000; color: #fff;
+      background: #000;           /* 背景黑色 */
+      color: #fff;
       font-family: "Microsoft JhengHei", sans-serif;
-      text-align: center;
-    }
-    #container {
-      max-width: 360px;
-      margin: 0 auto;
-      padding: 16px;
+      text-align: center;         /* 置中所有內文 */
     }
     h1 {
       margin: 24px 0;
       font-size: 2rem;
+    }
+    #container {
+      max-width: 300px;           /* 縮小遊戲畫面寬度 */
+      margin: 0 auto;
+      padding: 16px;
     }
     button {
       width: 100%; max-width: 360px;
       margin: 12px 0;
       padding: 12px 0;
       font-size: 1rem;
-      border: none; border-radius: 8px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
     }
-    #loginBtn { background: #00c300; color: #fff; display: none; }
-    #play     { background: #28a745; color: #fff; display: none; }
-     video {
+    #loginBtn {
+      background: #00c300; color: #fff;
+      display: none;
+    }
+    #play {
+      background: #28a745; color: #fff;
+      display: none;
+    }
+    video {
   max-width: 280px;  /* 最大寬度 320px */
   width: 100%;       /* 寬度佔滿父容器 */
   height: auto;      /* 高度自動 */
 }
-
     #msg {
-      margin: 16px 0; font-size: 1.2rem; font-weight: bold;
+      margin: 16px 0;
+      font-size: 1.2rem;
+      font-weight: bold;
     }
     #form {
-      display: none; margin-top: 16px;
+      display: none;
+      margin-top: 16px;
     }
     #form input {
       width: 100%; max-width: 360px;
-      padding: 10px; margin: 6px 0;
-      border: none; border-radius: 6px;
-      background: #fff; color: #000;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: none;
+      background: #fff;           /* 輸入欄白底 */
+      color: #000;                /* 文字黑色 */
       font-size: 1rem;
     }
-    #submit {
+    #form button {
       background: #ffc107; color: #000;
       display: none;
     }
   </style>
+
+  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <div id="container">
     <h1>🎰 轉轉小瑪莉</h1>
+
     <button id="loginBtn">LINE 登入</button>
     <button id="play">載入中…</button>
 
     <video id="mv" playsinline>
-      <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4"
-              type="video/mp4">
+      <source src="https://voom-obs.line-scdn.net/hlCRdDEcYL206cTxjDScoFBNJJEIQdnV_LAIXSjV7EgYpVB9hLCd0ChpvBhcjSzV8LDMXCyt7DQAXSHVzAw0bTyF7K18pSBQ7ADAMTDFBN1Q-XQ/mp4" type="video/mp4">
     </video>
 
     <div id="msg"></div>
@@ -72,99 +89,77 @@
     <div id="form">
       <input id="username" placeholder="姓名" readonly />
       <input id="phone" placeholder="手機" />
-      <button id="submit">送出</button>
+      <button id="submit">點擊右上角x關閉視窗 查詢優惠</button>
     </div>
   </div>
 
   <audio id="winSound" preload="auto"
-         src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3"></audio>
+         src="https://aiwe.cc/wp-content/uploads/2025/07/56ab24c15b72a457069c5ea42fcfc640.mp3">
+  </audio>
   <audio id="loseSound" preload="auto"
-         src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
+         src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3">
+  </audio>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXt_v1XqQWDIeCQxU0Ys8h-YDTmi04SuvO6iQwdFISS7QzONIjx7QmOwTtFFUzIP9U/exec';
-    const storeId    = new URL(location).searchParams.get('storeId');
+    const API = 'https://script.google.com/macros/s/AKfycbzXt_v1XqQWDIeCQxU0Ys8h-YDTmi04SuvO6iQwdFISS7QzONIjx7QmOwTtFFUzIP9U/exec';
+    const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID, PROFILE;
 
-    async function fetchLiffId(sid) {
-      const res  = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${sid}`);
-      const obj  = await res.json();
-      return obj.liffId;
-    }
-
     async function init() {
-      // 1. 取得 LIFF ID
-      const liffId = await fetchLiffId(storeId);
-      if (!liffId) {
-        alert('無效的 storeId，請聯絡管理員');
-        return;
-      }
-      // 2. 初始化 LIFF
-      await liff.init({ liffId });
-      // 3. 登入檢查
+      await liff.init({ liffId: '2007161529-oEeAzNVO' });
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
         document.getElementById('loginBtn').onclick = () => liff.login();
         return;
       }
       PROFILE = await liff.getProfile();
-      USER_ID = PROFILE.userId;
+      USER_ID  = PROFILE.userId;
       document.getElementById('loginBtn').style.display = 'none';
 
-      // 4. 啟用「開始遊戲」
-      const play = document.getElementById('play');
-      play.style.display   = 'block';
-      play.disabled        = false;
-      play.textContent     = '開始遊戲';
-      play.onclick         = handleDraw;
+      const btn = document.getElementById('play');
+      btn.style.display = 'block';
+      btn.disabled      = false;
+      btn.textContent  = '開始遊戲';
+      btn.onclick      = handleDraw;
     }
 
     function showAnimation() {
       return new Promise(resolve => {
-        const play = document.getElementById('play');
-        play.style.display = 'none';
-        const mv = document.getElementById('mv');
-        mv.style.display   = 'block';
-        mv.currentTime     = 0;
-        mv.play();
-        setTimeout(() => { mv.pause(); resolve(); }, 7000);
+        const btn = document.getElementById('play');
+        btn.style.display = 'none';
+        const v           = document.getElementById('mv');
+        v.style.display   = 'block';
+        v.currentTime     = 0;
+        v.play();
+        setTimeout(()=>{ v.pause(); resolve(); }, 7000);
       });
     }
 
     async function handleDraw() {
       await showAnimation();
-      // POST draw
-      await fetch(SCRIPT_URL, {
+      const res = await fetch(API, {
         method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action:   'draw',
-          storeId,
-          userId:   USER_ID,
-          username: PROFILE.displayName
-        })
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ action:'draw', storeId, userId:USER_ID })
       });
       document.getElementById('winSound').play().catch(()=>{});
       document.getElementById('msg').textContent = '🎊 恭喜中獎！';
       document.getElementById('form').style.display = 'block';
       document.getElementById('username').value = PROFILE.displayName;
       document.getElementById('submit').style.display = 'block';
-      document.getElementById('submit').onclick    = handleSubmit;
+      document.getElementById('submit').onclick = handleSubmit;
     }
 
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
-      if (!phone) {
-        alert('請填寫手機號碼');
-        return;
-      }
-      await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
+      if (!phone) { alert('請填手機'); return; }
+      await fetch(API, {
+        method: 'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
         body: JSON.stringify({
-          action:  'claim',
-          storeId: storeId,
-          userId:  USER_ID,
+          action: 'claim',
+          storeId,
+          userId: USER_ID,
           phone
         })
       });
@@ -175,3 +170,5 @@
   </script>
 </body>
 </html>
+
+
