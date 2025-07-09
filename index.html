@@ -4,14 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎰 轉轉小瑪莉</title>
-  <!-- 正確路徑，避免 GitHub Pages 404 -->
-  <link rel="stylesheet" href="./static/css/style.css" />
+  <!-- 正確引用 style.css.html -->
+  <?!= include("style.css"); ?>
+  <!-- LIFF SDK：必須在呼叫 liff.init() 前載入 -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     #form { display: none; margin-top: 1rem; }
-    #play { display: none; }
   </style>
 </head>
+
 <body>
   <h1>🎰 轉轉小瑪莉</h1>
   <button id="loginBtn">LINE 登入</button>
@@ -25,7 +26,7 @@
 
   <div id="form">
     <input id="username" placeholder="姓名" readonly />
-    <input id="phone" placeholder="手機" type="tel" maxlength="10" />
+    <input id="phone" placeholder="手機" />
     <div id="wrapSubmit" style="display:flex; justify-content:center; margin-top:12px;">
       <button id="submit" style="display:none;">送出</button>
     </div>
@@ -35,7 +36,7 @@
   <audio id="loseSound" preload="auto" src="https://aiwe.cc/wp-content/uploads/2025/07/b3a7a4e64bcd8aabe4cabe0e55b57af5.mp3"></audio>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQ3iP_umyLDGCKda4fq-48ADahXfSIzXjdgL2dGG0d_zRMpVcT3EfyjKRc_JXd2LIf/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxt0eGNn8u07am_hFXkF9EN9s1nSFYJZCbawJYoNxBZQi5F8L7vF_WLqGWnOi_w1LJG/exec';
     const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID = null;
     let PROFILE = null;
@@ -48,7 +49,7 @@
 
     async function init() {
       const liffId = await fetchLiffId(storeId);
-      if (!liffId) return alert('找不到對應的 LIFF ID');
+      if (!liffId) { alert('找不到對應的 LIFF ID'); return; }
 
       await liff.init({ liffId });
       if (!liff.isLoggedIn()) {
@@ -69,50 +70,45 @@
 
     function showAnimation(seconds) {
       return new Promise(resolve => {
-        const video = document.getElementById('mv');
         const playBtn = document.getElementById('play');
-        playBtn.disabled = true;
         playBtn.style.display = 'none';
-
+        const video = document.getElementById('mv');
         video.style.display = 'block';
         video.currentTime = 0;
         video.play();
-
-        setTimeout(() => {
-          video.pause();
-          resolve();
-        }, seconds * 1000);
+        setTimeout(() => { video.pause(); resolve(); }, seconds * 1000);
       });
     }
 
     async function handleDraw() {
       await showAnimation(7);
-      const res = await fetch(`${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`, {
-        method: 'POST'
-      });
+      const res = await fetch(
+        `${SCRIPT_URL}?action=draw&userId=${USER_ID}&storeId=${storeId}`,
+        { method: 'POST' }
+      );
       const data = await res.json();
       const msgEl = document.getElementById('msg');
-
       if (data.error) {
         msgEl.textContent = `錯誤：${data.error}`;
         document.getElementById('play').style.display = 'block';
-        document.getElementById('play').disabled = false;
         return;
       }
 
       msgEl.textContent = `🎉 恭喜獲得 ${data.vendor} 的 ${data.prize}`;
-      document.getElementById('winSound').play().catch(()=>{});
-      document.getElementById('form').style.display = 'block';
-      document.getElementById('username').value = PROFILE.displayName;
+      document.getElementById('winSound').play().catch(() => {});
 
-      const submitBtn = document.getElementById('submit');
-      submitBtn.style.display = 'block';
-      submitBtn.onclick = handleSubmit;
+      if (data.vendor) {
+        document.getElementById('form').style.display = 'block';
+        document.getElementById('username').value = PROFILE.displayName;
+        const submitBtn = document.getElementById('submit');
+        submitBtn.style.display = 'block';
+        submitBtn.onclick = handleSubmit;
+      }
     }
 
     async function handleSubmit() {
       const phone = document.getElementById('phone').value.trim();
-      if (!phone.match(/^09\d{8}$/)) return alert('請填正確手機號碼');
+      if (!phone) { alert('請填手機'); return; }
 
       await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -125,7 +121,7 @@
         })
       });
 
-      document.getElementById('msg').textContent = '✅ 已送出中獎資料';
+      document.getElementById('msg').textContent = '✅ 已送出！';
       const btn = document.getElementById('submit');
       btn.textContent = '關閉視窗';
       btn.onclick = () => liff.closeWindow();
