@@ -1,44 +1,53 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>🔍 我的優惠券</title>
   <style>
     html, body {
-      margin:0; padding:0;
-      background:#000; color:#fff;
-      font-family:"Microsoft JhengHei",sans-serif;
-      text-align:center;
+      margin: 0; padding: 0;
+      background: #000; color: #fff;
+      font-family: "Microsoft JhengHei", sans-serif;
+      text-align: center;
     }
     #container {
-      max-width:360px; margin:0 auto; padding:16px;
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 16px;
     }
     h1 {
-      margin-bottom:16px; color:gold; font-size:1.8rem;
+      margin-bottom: 16px;
+      color: gold;
+      font-size: 1.8rem;
     }
     button {
-      width:100%; max-width:360px;
-      padding:12px; margin:12px 0;
-      border:none; border-radius:8px;
-      font-size:1rem; cursor:pointer;
+      width: 100%; max-width: 360px;
+      padding: 12px; margin: 12px 0;
+      border: none; border-radius: 8px;
+      font-size: 1rem; cursor: pointer;
     }
-    #loginBtn { background:#00c300; color:#fff; display:none; }
-    #queryBtn { background:#28a745; color:#fff; display:none; }
+    #loginBtn { background: #00c300; color: #fff; display: none; }
+    #queryBtn { background: #28a745; color: #fff; display: none; }
     .coupon, .redeemed {
-      background:#222; text-align:left;
-      padding:12px; margin:8px 0;
-      border-radius:8px;
+      background: #222; text-align: left;
+      padding: 12px; margin: 8px 0;
+      border-radius: 8px;
     }
     .redeem-btn {
-      display:block;
-      width:100%; margin-top:8px;
-      padding:10px; border:none; border-radius:6px;
-      background:#009688; color:#fff;
-      font-size:1rem; cursor:pointer;
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background: #009688;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
     }
     .redeemed {
-      background:#555; color:#ccc;
+      background: #555; color: #ccc;
     }
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -53,31 +62,27 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcn0dQq4Fl9-gfAs7P10ZMCMeE8h2RJbmuAJ_flUH2a-Shw9nAsaYT9dHViG_De7pU/exec';
-    const storeId = new URL(location).searchParams.get('storeId');
+    const storeId    = new URL(location).searchParams.get('storeId');
     let USER_ID;
 
-    // 1. 初始：先拿 LIFF ID，然後 init
     async function init() {
-      // 拿 admin 部署後的 getLiffId 接口
+      // 取得 LIFF ID 並 init
       const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${storeId}`);
       const { liffId } = await resp.json();
-      if (!liffId) return alert('找不到店家 LIFF ID，請聯絡管理員');
+      if (!liffId) return alert('找不到此店家 LIFF ID');
       await liff.init({ liffId });
-      // 2. 如果沒登入，顯示登入按鈕
+
       if (!liff.isLoggedIn()) {
         document.getElementById('loginBtn').style.display = 'block';
         document.getElementById('loginBtn').onclick = () => liff.login();
-        return;
+      } else {
+        const profile = await liff.getProfile();
+        USER_ID = profile.userId;
+        document.getElementById('queryBtn').style.display = 'block';
+        document.getElementById('queryBtn').onclick = fetchList;
       }
-      // 3. 已登入，儲存 userId，顯示「查詢」按鈕
-      const profile = await liff.getProfile();
-      USER_ID = profile.userId;
-      document.getElementById('loginBtn').style.display = 'none';
-      document.getElementById('queryBtn').style.display = 'block';
-      document.getElementById('queryBtn').onclick = fetchList;
     }
 
-    // 4. 查詢並渲染
     async function fetchList() {
       const res = await fetch(`${SCRIPT_URL}?action=query&storeId=${storeId}&userId=${USER_ID}`);
       const { unredeemed, redeemed } = await res.json();
@@ -85,18 +90,16 @@
       list.innerHTML = '';
 
       // 已核銷
-      if (redeemed.length) {
-        redeemed.forEach(c => {
-          const d = new Date(c.redeemedAt).toLocaleString();
-          const div = document.createElement('div');
-          div.className = 'redeemed';
-          div.innerHTML = `
-            <strong>${c.vendor}：${c.prize}</strong><br>
-            已核銷於：${d}
-          `;
-          list.appendChild(div);
-        });
-      }
+      redeemed.forEach(c => {
+        const d = new Date(c.redeemedAt).toLocaleString();
+        const div = document.createElement('div');
+        div.className = 'redeemed';
+        div.innerHTML = `
+          <strong>${c.vendor}：${c.prize}</strong><br>
+          已核銷於：${d}
+        `;
+        list.appendChild(div);
+      });
 
       // 未核銷
       if (!unredeemed.length) {
@@ -124,20 +127,18 @@
       }
     }
 
-    // 5. 核銷：呼叫后端redeem，带 prize/time
-    async function redeem(c) {
+    async function redeem(coupon) {
       await fetch(SCRIPT_URL, {
-        method:'POST', mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action:'redeem',
-          storeId:storeId,
-          userId:USER_ID,
-          prize:c.prize,
-          time: c.time
+          action:  'redeem',
+          storeId: storeId,
+          userId:  USER_ID,
+          prize:   coupon.prize,
+          time:    coupon.time
         })
       });
-      // 刷新列表
       fetchList();
     }
 
