@@ -1,50 +1,53 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>🔍 我的優惠</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🔍 我的優惠券</title>
   <style>
-    body {
+    html, body {
       margin:0; padding:0;
       background:#000; color:#fff;
-      font-family:"Microsoft JhengHei";
+      font-family:"Microsoft JhengHei",sans-serif;
       text-align:center;
     }
     #container {
       max-width:360px; margin:0 auto; padding:16px;
     }
-    h1 { color:gold; margin-bottom:16px; }
+    h1 {
+      margin-bottom:16px; color:gold; font-size:1.8rem;
+    }
     button {
-      width:100%; padding:12px; margin:12px 0;
+      width:100%; max-width:360px;
+      padding:12px; margin:12px 0;
       border:none; border-radius:8px;
       font-size:1rem; cursor:pointer;
     }
-    #queryBtn { background:#28a745; color:#fff; }
-    .coupon {
-      background:#222; padding:12px; margin:8px 0;
-      border-radius:8px; text-align:left;
+    #loginBtn { background:#00c300; color:#fff; display:none; }
+    #queryBtn { background:#28a745; color:#fff; display:none; }
+    .coupon, .redeemed {
+      background:#222; text-align:left;
+      padding:12px; margin:8px 0;
+      border-radius:8px;
     }
-    .coupon p { margin:6px 0; }
     .redeem-btn {
-      display:block; width:100%;
+      display:block;
+      width:100%; margin-top:8px;
+      padding:10px; border:none; border-radius:6px;
       background:#009688; color:#fff;
-      padding:10px; margin-top:8px;
-      border:none; border-radius:6px;
       font-size:1rem; cursor:pointer;
     }
     .redeemed {
       background:#555; color:#ccc;
-      padding:10px; margin:8px 0;
-      border-radius:6px;
     }
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <div id="container">
-    <h1>🔍 我的優惠</h1>
-    <button id="queryBtn" disabled>載入中…</button>
+    <h1>🔍 我的優惠券</h1>
+    <button id="loginBtn">LINE 登入</button>
+    <button id="queryBtn">查詢我的優惠</button>
     <div id="list"></div>
   </div>
 
@@ -53,69 +56,76 @@
     const storeId = new URL(location).searchParams.get('storeId');
     let USER_ID;
 
-    async function init(){
-      await liff.init({ liffId:'2007161529-oEeAzNVO' });
-      if(!liff.isLoggedIn()){ liff.login(); return; }
+    // 1. 初始：先拿 LIFF ID，然後 init
+    async function init() {
+      // 拿 admin 部署後的 getLiffId 接口
+      const resp = await fetch(`${SCRIPT_URL}?action=getLiffId&storeId=${storeId}`);
+      const { liffId } = await resp.json();
+      if (!liffId) return alert('找不到店家 LIFF ID，請聯絡管理員');
+      await liff.init({ liffId });
+      // 2. 如果沒登入，顯示登入按鈕
+      if (!liff.isLoggedIn()) {
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('loginBtn').onclick = () => liff.login();
+        return;
+      }
+      // 3. 已登入，儲存 userId，顯示「查詢」按鈕
       const profile = await liff.getProfile();
       USER_ID = profile.userId;
-      const btn = document.getElementById('queryBtn');
-      btn.disabled = false;
-      btn.textContent = '查詢我的優惠';
-      btn.onclick = fetchList;
+      document.getElementById('loginBtn').style.display = 'none';
+      document.getElementById('queryBtn').style.display = 'block';
+      document.getElementById('queryBtn').onclick = fetchList;
     }
 
-    async function fetchList(){
+    // 4. 查詢並渲染
+    async function fetchList() {
       const res = await fetch(`${SCRIPT_URL}?action=query&storeId=${storeId}&userId=${USER_ID}`);
       const { unredeemed, redeemed } = await res.json();
-      const container = document.getElementById('list');
-      container.innerHTML = '';
+      const list = document.getElementById('list');
+      list.innerHTML = '';
 
-      // 先顯示已核銷
-      if(redeemed.length){
-        const header = document.createElement('div');
-        header.className = 'redeemed';
-        header.textContent = '✔ 已核銷優惠';
-        container.appendChild(header);
-        redeemed.forEach(c=>{
+      // 已核銷
+      if (redeemed.length) {
+        redeemed.forEach(c => {
           const d = new Date(c.redeemedAt).toLocaleString();
           const div = document.createElement('div');
           div.className = 'redeemed';
-          div.textContent = `${c.vendor}：${c.prize}（${d}）`;
-          container.appendChild(div);
+          div.innerHTML = `
+            <strong>${c.vendor}：${c.prize}</strong><br>
+            已核銷於：${d}
+          `;
+          list.appendChild(div);
         });
       }
 
-      // 再顯示未核銷
-      if(!unredeemed.length){
-        const no = document.createElement('div');
-        no.textContent = '目前沒有可核銷的優惠';
-        container.appendChild(no);
+      // 未核銷
+      if (!unredeemed.length) {
+        const none = document.createElement('div');
+        none.textContent = '目前沒有可核銷的優惠';
+        list.appendChild(none);
       } else {
-        unredeemed.forEach((c, i)=>{
+        unredeemed.forEach(c => {
+          const d = new Date(c.time).toLocaleString();
           const div = document.createElement('div');
           div.className = 'coupon';
-          const lines = [
-            `1. 廠商：${c.vendor}`,
-            `2. 獎品：${c.prize}`,
-            `3. 中獎時間：${new Date(c.time).toLocaleString()}`
-          ];
-          lines.forEach(txt=>{
-            const p = document.createElement('p');
-            p.textContent = txt;
-            div.appendChild(p);
-          });
+          div.innerHTML = `
+            1. 使用者：${c.username}<br>
+            2. 廠商：${c.vendor}<br>
+            3. 獎品：${c.prize}<br>
+            4. 中獎時間：${d}
+          `;
           const btn = document.createElement('button');
           btn.className = 'redeem-btn';
           btn.textContent = '核銷';
-          btn.onclick = ()=>redeem(c);
+          btn.onclick = () => redeem(c);
           div.appendChild(btn);
-          container.appendChild(div);
+          list.appendChild(div);
         });
       }
     }
 
-    async function redeem(coupon){
-      // 傳 prize + drawTime 讓後端 match
+    // 5. 核銷：呼叫后端redeem，带 prize/time
+    async function redeem(c) {
       await fetch(SCRIPT_URL, {
         method:'POST', mode:'no-cors',
         headers:{'Content-Type':'text/plain'},
@@ -123,11 +133,11 @@
           action:'redeem',
           storeId:storeId,
           userId:USER_ID,
-          prize: coupon.prize,
-          time:  coupon.time
+          prize:c.prize,
+          time: c.time
         })
       });
-      // 核銷後重新抓一次
+      // 刷新列表
       fetchList();
     }
 
