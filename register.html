@@ -63,10 +63,25 @@
       USER_ID = profile.userId;
 
       // 載入店鋪列表並顯示表單
+          // 載入店鋪列表
       let storesRes = await fetch(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
-      let stores = Array.isArray(storesRes) ? storesRes : (storesRes.data || []);
-      if (!Array.isArray(stores)) stores = []; // 防護(`${SCRIPT_URL}?action=listStores`).then(r => r.json());
+      console.log('listStores response:', storesRes);
+      // 確保是陣列
+      let stores = [];
+      if (Array.isArray(storesRes)) {
+        stores = storesRes;
+      } else if (storesRes && Array.isArray(storesRes.data)) {
+        stores = storesRes.data;
+      } else {
+        console.warn('listStores 回傳非陣列，忽略', storesRes);
+      }
       const sel = document.getElementById('storeSelect');
+      stores.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = `${s.id} ${s.name}`;
+        sel.appendChild(o);
+      });
       stores.forEach(s => {
         const o = document.createElement('option');
         o.value = s.id;
