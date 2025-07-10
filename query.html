@@ -36,7 +36,7 @@
       const uid     = profile.userId;
 
       // 5. 查詢中獎紀錄
-      const res = await fetch('https://script.google.com/macros/s/AKfycbwooOk6KjFuQywfjQ5mVxeCu2jAzk3z-NQNDOHV7Q0T1FdUtYCy36gJs7ysoNShbtjh/exec', {
+      const res = await fetch('https://script.google.com/macros/s/AKfycbxtyhSdZfZ58vNljruRIw4VrRgq60Eavt-Z7zF-9rer_4PLVsRFq7px6UkmlKs7CfD9/exec', {
         method: 'POST', mode: 'cors',
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({ action:'query', storeId: STORE_ID, userId: uid })
