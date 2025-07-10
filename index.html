@@ -31,9 +31,12 @@
     #loginBtn { background: #00c300; color: #fff; display: none; }
     #play     { background: #28a745; color: #fff; display: none; }
     video {
-  max-width: 250px;  /* 最大寬度 320px */
-  width: 100%;       /* 寬度佔滿父容器 */
-  height: auto;      /* 高度自動 */
+  display: block;        /* 使其成為 block 元素，才能使用 margin auto 水平置中 */
+  margin: 16px center;     /* 上下 16px，左右 auto */
+  max-width: 250px;      /* 最大寬度 */
+  width: 100%;           /* 寬度佔滿父容器 */
+  height: auto;          /* 高度自動 */
+  border-radius: 12px;   /* 如果還要保留圓角 */
 }
 
     #msg {
