@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>我的中獎紀錄</title>
+  <title>🎁 我的中獎紀錄</title>
   <style>
     body { margin:0; background:#111; color:#fff; font-family:"Microsoft JhengHei"; padding:16px; }
     h2 { text-align:center; color:#ffd700; margin-bottom:16px; }
     .loading, .error { text-align:center; margin:20px 0; color:#ccc; }
     .card { background:#333; padding:12px; margin:12px 0; border-radius:8px; }
     .card h3 { margin:0 0 8px; color:#fff; }
-    .info { font-size:.9em; line-height:1.4; }
+    .info { font-size:.9em; line-height:1.4; text-align:left; }
     .redeemBtn { width:100%; padding:10px; margin-top:8px; border:none; border-radius:6px;
                  background:#ffc107; color:#000; font-size:1em; }
     .redeemBtn.done { background:#666; color:#bbb; cursor:not-allowed; }
@@ -25,8 +25,8 @@
   <div id="list"><div class="loading">載入中…</div></div>
 
   <script>
-    const LIFF_ID = '2007161529-B4X1z4xl';
-    const API     = 'https://script.google.com/macros/s/AKfycbxtdUD6ID3g33ofdN4K-airGuohEbLws034CKt7rOUINCS1dG0eoQZKZvtTGmLMZ-wX/exec';
+    const LIFF_ID = '2007161529-B4X1z4xl';  // 你的 LIFF ID
+    const API     = 'https://script.google.com/macros/s/AKfycbzrEXIL57jI9QeFLe_zKQ-apcDxgAlqXpHNa3vmB7dHwgdRHDqa0I403u8-xSv-BgVF/exec';
 
     async function init() {
       await liff.init({ liffId: LIFF_ID });
@@ -40,16 +40,17 @@
       list.innerHTML = '<div class="loading">載入中…</div>';
       try {
         const res = await fetch(API, {
-          method: 'POST', mode: 'cors',
-          headers: { 'Content-Type':'application/json' },
-          body: JSON.stringify({ act:'query', userId: uid })
+          method: 'POST',
+          mode:   'cors',
+          headers:{ 'Content-Type':'application/json' },
+          body:   JSON.stringify({ action:'query', userId: uid })
         });
         if (!res.ok) throw new Error(res.status);
-        const j = await res.json();
-        if (j.status!=='ok') throw new Error(j.message||'後端錯誤');
-        render(j.data);
+        const data = await res.json();
+        render(data);
       } catch(err) {
-        list.innerHTML = `<div class="error">讀取失敗：${err.message}</div>`;
+        document.getElementById('list').innerHTML =
+          `<div class="error">讀取失敗：${err.message}</div>`;
       }
     }
 
@@ -59,36 +60,18 @@
         list.innerHTML = '<p class="loading">尚無中獎紀錄</p>';
         return;
       }
-      list.innerHTML = arr.map(o=>`
-        <div class="card" id="c${o.row}">
-          <h3>${o.lineName}</h3>
+      list.innerHTML = arr.map(o => `
+        <div class="card">
+          <h3>門市 ${o.storeId} — ${o.username}</h3>
           <div class="info">
-            中獎時間：${o.winTime}<br>
-            遊戲名稱：${o.game}<br>
-            優惠內容：${o.prize}
+            廠商：${o.vendor}<br>
+            優惠：${o.prize}<br>
+            手機：${o.phone||'未填'}<br>
+            中獎時間：${new Date(o.timestamp).toLocaleString()}<br>
+            狀態：${o.claimed ? '已核銷' : '未核銷'}
           </div>
-          ${o.isRedeem
-            ? `<button class="redeemBtn done" disabled>已核銷<br>${o.redeemTime}</button>`
-            : `<button class="redeemBtn" onclick="redeem(${o.row}, this)">核銷</button>`}
-        </div>`).join('');
-    }
-
-    async function redeem(row, btn) {
-      btn.disabled = true; btn.textContent='處理中…';
-      try {
-        const res = await fetch(API, {
-          method:'POST', mode:'cors',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ act:'redeem', row })
-        });
-        const j = await res.json();
-        if (j.status!=='ok') throw new Error(j.message);
-        btn.className='redeemBtn done';
-        btn.innerHTML=`已核銷<br>${j.data}`;
-      } catch(e) {
-        alert('核銷失敗：'+e.message);
-        btn.disabled=false; btn.textContent='核銷';
-      }
+        </div>
+      `).join('');
     }
 
     init();
